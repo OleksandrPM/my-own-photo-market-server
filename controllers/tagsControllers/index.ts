@@ -1,13 +1,17 @@
 import getAllTags from "./getAllTags";
 import getTagById from "./getTagById";
-import getTagByName from "./getTagByName";
+import getTagsByName from "./getTagsByName";
 import addTag from "./addTag";
+import deleteTagById from "./deleteTagById";
+import updateTag from "./updateTag";
 
 import controllerWrapper from "../../decorators/controllerWrapper";
 
 export default {
   getAllTags: controllerWrapper(getAllTags),
   getTagById: controllerWrapper(getTagById),
-  getTagByName: controllerWrapper(getTagByName),
+  getTagsByName: controllerWrapper(getTagsByName),
   addTag: controllerWrapper(addTag),
+  deleteTagById: controllerWrapper(deleteTagById),
+  updateTag: controllerWrapper(updateTag),
 };

@@ -4,8 +4,11 @@ import controller from "../../controllers/tagsControllers/index";
 const tagsRouter = Router();
 
 tagsRouter.get("/", controller.getAllTags);
-tagsRouter.get("/:id", controller.getTagById);
-tagsRouter.get("/name/:name", controller.getTagByName);
 tagsRouter.post("/", controller.addTag);
+tagsRouter.get("/:id", controller.getTagById);
+tagsRouter.put("/:id", controller.updateTag);
+tagsRouter.delete("/:id", controller.deleteTagById);
+
+tagsRouter.get("/search/", controller.getTagsByName);
 
 export default tagsRouter;
