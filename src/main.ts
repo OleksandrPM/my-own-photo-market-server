@@ -1,15 +1,18 @@
 import { NestFactory } from '@nestjs/core';
+import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
-import 'dotenv/config';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     cors: {
-      origin: 'http://localhost:3000',
+      origin: process.env.ORIGIN_URL || 'http://localhost:3000',
       credentials: true,
     },
   });
-  const port = process.env.PORT || 3000;
+
+  const config = app.get(ConfigService);
+
+  const port = parseInt(config.get<string>('PORT') ?? '3001', 10);
 
   await app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
