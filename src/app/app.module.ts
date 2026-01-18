@@ -6,8 +6,6 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { TagsModule } from './tags/tags.module';
 
-// TODO: remove dotenv if unused
-
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
