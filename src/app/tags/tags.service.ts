@@ -7,32 +7,37 @@ import { CreateTagDto } from './dto/create-tag.dto';
 
 @Injectable()
 export class TagsService {
-  constructor(@InjectRepository(Tag) private tagsRepository: Repository<Tag>) {}
+  constructor(
+    @InjectRepository(Tag, 'reader')
+    private readonly readerRepository: Repository<Tag>,
+    @InjectRepository(Tag, 'editor')
+    private readonly editorRepository: Repository<Tag>,
+  ) {}
 
   create(tagName: CreateTagDto): Promise<Tag> {
-    const tag = this.tagsRepository.create({ tag: tagName.tag });
-    return this.tagsRepository.save(tag);
+    const tag = this.editorRepository.create({ tag: tagName.tag });
+    return this.editorRepository.save(tag);
   }
 
   async findAll(): Promise<Tag[]> {
-    return this.tagsRepository.find();
+    return this.readerRepository.find();
   }
 
   findOne(id: number): Promise<Tag | null> {
-    return this.tagsRepository.findOneBy({ id });
+    return this.readerRepository.findOneBy({ id });
   }
 
   findByName(name: string): Promise<Tag | null> {
-    return this.tagsRepository.findOneBy({ tag: name });
+    return this.readerRepository.findOneBy({ tag: name });
   }
 
   async update(id: number, updatedTag: UpdateTagDto): Promise<Tag | null> {
-    return this.tagsRepository
+    return this.editorRepository
       .update({ id }, updatedTag)
       .then(() => this.findOne(id));
   }
 
   async remove(id: number): Promise<void> {
-    await this.tagsRepository.delete({ id });
+    await this.editorRepository.delete({ id });
   }
 }
