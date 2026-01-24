@@ -2,7 +2,7 @@
 -- User roles --
 CREATE TYPE role AS ENUM ('admin', 'user');
 
--- Create table --
+-- Create users table --
 CREATE TABLE users (
   id SERIAL PRIMARY KEY,
   email TEXT NOT NULL UNIQUE,

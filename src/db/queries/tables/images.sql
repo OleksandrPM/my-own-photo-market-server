@@ -2,7 +2,7 @@
 -- Create orientation type --
 CREATE TYPE orientation_type AS ENUM ('horizontal', 'vertical', 'square');
 
--- Create table --
+-- Create images table --
 CREATE TABLE images (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL, -- image name/title

@@ -1,5 +1,5 @@
 -- TAGS --
--- Create table --
+-- Create tags table --
 CREATE TABLE tags (id SERIAL PRIMARY KEY, tag TEXT NOT NULL UNIQUE);
 
 -- Get all tags --
