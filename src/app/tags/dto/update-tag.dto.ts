@@ -1,7 +1,4 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { CreateTagDto } from './create-tag.dto';
 
-export class UpdateTagDto extends PartialType(CreateTagDto) {
-  readonly id: number;
-  tag: string;
-}
+export class UpdateTagDto extends PartialType(CreateTagDto) {}
