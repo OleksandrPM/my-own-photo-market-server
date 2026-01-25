@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
+import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app/app.module';
 
 // TODO: remove dotenv if unused
@@ -11,6 +12,17 @@ async function bootstrap() {
       credentials: true,
     },
   });
+
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true, // strips unknown fields
+      forbidNonWhitelisted: false,
+      transform: true, // converts payloads to DTO instances
+      transformOptions: {
+        enableImplicitConversion: true,
+      },
+    }),
+  );
 
   const config = app.get(ConfigService);
 
