@@ -11,7 +11,7 @@ import { TagsService } from './tags.service';
 import { CreateTagDto } from './dto/create-tag.dto';
 import { UpdateTagDto } from './dto/update-tag.dto';
 
-@Controller('tags')
+@Controller()
 export class TagsController {
   constructor(private readonly tagsService: TagsService) {}
 
