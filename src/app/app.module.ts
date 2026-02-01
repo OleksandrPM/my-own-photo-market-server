@@ -3,6 +3,8 @@ import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { RoutingModule } from './routing/routing.module';
 import { DatabaseModule } from './db/db.module';
+import { APP_GUARD } from '@nestjs/core';
+import { RolesGuard } from './auth/roles.guard';
 
 @Module({
   imports: [
@@ -11,5 +13,6 @@ import { DatabaseModule } from './db/db.module';
     RoutingModule,
   ],
   controllers: [AppController],
+  providers: [{ provide: APP_GUARD, useClass: RolesGuard }],
 })
 export class AppModule {}
