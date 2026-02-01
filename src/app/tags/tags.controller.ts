@@ -10,38 +10,49 @@ import {
 import { TagsService } from './tags.service';
 import { CreateTagDto } from './dto/create-tag.dto';
 import { UpdateTagDto } from './dto/update-tag.dto';
+import { Roles } from '../auth/roles.decorator';
+import { UserRole } from '../users/entities/user.entity';
 
 @Controller()
 export class TagsController {
   constructor(private readonly tagsService: TagsService) {}
 
+  // Admin
+  @Roles(UserRole.ADMIN)
   @Post()
-  create(@Body() newTag: CreateTagDto) {
+  createTag(@Body() newTag: CreateTagDto) {
     return this.tagsService.create(newTag);
   }
 
+  // Public
   @Get()
-  findAll() {
+  findAllTags() {
     return this.tagsService.findAll();
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.tagsService.findOne(+id);
-  }
-
+  // Public
   @Get('name/:name')
-  findByName(@Param('name') name: string) {
+  findTagByName(@Param('name') name: string) {
     return this.tagsService.findByName(name);
   }
 
+  // Public
+  @Get(':id')
+  findTagById(@Param('id') id: string) {
+    return this.tagsService.findById(+id);
+  }
+
+  // Admin
+  @Roles(UserRole.ADMIN)
   @Patch(':id')
-  update(@Param('id') id: string, @Body() tag: UpdateTagDto) {
+  updateTag(@Param('id') id: string, @Body() tag: UpdateTagDto) {
     return this.tagsService.update(+id, tag);
   }
 
+  // Admin
+  @Roles(UserRole.ADMIN)
   @Delete(':id')
-  remove(@Param('id') id: string) {
+  removeTag(@Param('id') id: string) {
     return this.tagsService.remove(+id);
   }
 }
