@@ -1,30 +1,54 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
+import { PasswordService } from '../password/password.service';
+import { User } from '../users/entities/user.entity';
+import { CreateUserDto } from '../users/dto/create-user.dto';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private usersService: UsersService,
+    private readonly usersService: UsersService,
+    private readonly passwordService: PasswordService,
     private jwtService: JwtService,
   ) {}
 
-  async signIn(
-    username: string,
-    pass: string,
-  ): Promise<{ access_token: string }> {
-    const user = await this.usersService.findOne(username);
+  async signUp(
+    newUser: CreateUserDto,
+  ): Promise<User & { access_token: string }> {
+    const user = await this.usersService.create(newUser);
+    const access_token = await this.jwtService.signAsync({
+      sub: user.id,
+      email: user.email,
+    });
 
-    if (user?.password !== pass) {
+    return { ...user, access_token };
+  }
+
+  async signIn(
+    email: string,
+    password: string,
+  ): Promise<User & { access_token: string }> {
+    const user = await this.usersService.findByEmail(email);
+
+    if (user) {
+      const isPasswordLegal = await this.passwordService.verifyPassword(
+        user.passwordHash,
+        password,
+      );
+
+      if (isPasswordLegal) {
+        const access_token = await this.jwtService.signAsync({
+          sub: user.id,
+          email: user.email,
+        });
+
+        return { ...user, access_token };
+      } else {
+        throw new UnauthorizedException();
+      }
+    } else {
       throw new UnauthorizedException();
     }
-
-    const payload = { sub: user.userId, username: user.username };
-
-    return {
-      // 💡 Here the JWT secret key that's used for signing the payload
-      // is the key that was passsed in the JwtModule
-      access_token: await this.jwtService.signAsync(payload),
-    };
   }
 }
