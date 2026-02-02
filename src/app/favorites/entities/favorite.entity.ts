@@ -9,8 +9,8 @@ import {
 import { Image } from 'src/app/images/entities/image.entity';
 import { User } from 'src/app/users/entities/user.entity';
 
+@Unique(['userId', 'imageId'])
 @Entity('favorites')
-@Unique(['user_id', 'image_id'])
 export class Favorite {
   @PrimaryColumn({ name: 'user_id' })
   userId: number;
@@ -18,18 +18,18 @@ export class Favorite {
   @PrimaryColumn({ name: 'image_id' })
   imageId: number;
 
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'user_id' })
+  user: User;
+
+  @ManyToOne(() => Image)
+  @JoinColumn({ name: 'image_id' })
+  image: Image;
+
   @Column({
     name: 'added_at',
     type: 'timestamp',
     default: () => 'CURRENT_TIMESTAMP',
   })
   addedAt: Date;
-
-  @ManyToOne(() => User, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'user_id' })
-  user: User;
-
-  @ManyToOne(() => Image, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'image_id' })
-  image: Image;
 }
