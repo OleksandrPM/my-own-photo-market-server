@@ -20,7 +20,7 @@ export class TagsController {
   // Admin
   @Roles(UserRole.ADMIN)
   @Post()
-  createTag(@Body() newTag: CreateTagDto) {
+  createTag(@Body() newTag: CreateTagDto['name']) {
     return this.tagsService.create(newTag);
   }
 
@@ -45,8 +45,8 @@ export class TagsController {
   // Admin
   @Roles(UserRole.ADMIN)
   @Patch(':id')
-  updateTag(@Param('id') id: string, @Body() tag: UpdateTagDto) {
-    return this.tagsService.update(+id, tag);
+  updateTag(@Param('id') id: string, @Body() updatedTag: UpdateTagDto['name']) {
+    return this.tagsService.update(+id, updatedTag);
   }
 
   // Admin
