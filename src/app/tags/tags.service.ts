@@ -2,8 +2,6 @@ import { Repository } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Tag } from './entities/tag.entity';
-import { CreateTagDto } from './dto/create-tag.dto';
-import { UpdateTagDto } from './dto/update-tag.dto';
 import { DbConnectionName } from '../db/db.config';
 
 @Injectable()
@@ -15,8 +13,8 @@ export class TagsService {
     private readonly editorRepository: Repository<Tag>,
   ) {}
 
-  create(newTag: CreateTagDto): Promise<Tag> {
-    const tag = this.editorRepository.create({ tag: newTag.name });
+  create(newTag: string): Promise<Tag> {
+    const tag = this.editorRepository.create({ tag: newTag });
     return this.editorRepository.save(tag);
   }
 
@@ -32,9 +30,9 @@ export class TagsService {
     return this.readerRepository.findOneBy({ tag: name });
   }
 
-  async update(id: number, updatedTag: UpdateTagDto): Promise<Tag | null> {
+  async update(id: number, updatedTag: string): Promise<Tag | null> {
     return this.editorRepository
-      .update({ id }, { tag: updatedTag.name })
+      .update({ id }, { tag: updatedTag })
       .then(() => this.findById(id));
   }
 
