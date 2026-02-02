@@ -12,6 +12,7 @@ import { FavoritesModule } from '../favorites/favorites.module';
     AuthModule,
     UsersModule,
     TagsModule,
+    FavoritesModule,
     RouterModule.register([
       {
         path: 'api',
@@ -26,4 +27,4 @@ import { FavoritesModule } from '../favorites/favorites.module';
     ]),
   ],
 })
-export class RoutingModule {}
+export class ApiRoutingModule {}
