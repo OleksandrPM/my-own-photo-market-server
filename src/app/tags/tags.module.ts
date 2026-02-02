@@ -3,11 +3,12 @@ import { TagsService } from './tags.service';
 import { TagsController } from './tags.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Tag } from './entities/tag.entity';
+import { DbConnectionName } from '../db/db.config';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Tag], 'reader'),
-    TypeOrmModule.forFeature([Tag], 'editor'),
+    TypeOrmModule.forFeature([Tag], DbConnectionName.READER),
+    TypeOrmModule.forFeature([Tag], DbConnectionName.EDITOR),
   ],
   controllers: [TagsController],
   providers: [TagsService],
