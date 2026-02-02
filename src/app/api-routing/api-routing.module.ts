@@ -5,12 +5,14 @@ import { AuthModule } from '../auth/auth.module';
 import { UsersModule } from '../users/users.module';
 import { TagsModule } from '../tags/tags.module';
 import { FavoritesModule } from '../favorites/favorites.module';
+import { ImagesModule } from '../images/images.module';
 
 @Module({
   imports: [
     ApiModule,
     AuthModule,
     UsersModule,
+    ImagesModule,
     TagsModule,
     FavoritesModule,
     RouterModule.register([
@@ -20,6 +22,7 @@ import { FavoritesModule } from '../favorites/favorites.module';
         children: [
           { path: 'auth', module: AuthModule },
           { path: 'users', module: UsersModule },
+          { path: 'images', module: ImagesModule },
           { path: 'tags', module: TagsModule },
           { path: 'favorites', module: FavoritesModule },
         ],
