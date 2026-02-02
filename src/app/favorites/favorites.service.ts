@@ -1,26 +1,59 @@
-import { Injectable } from '@nestjs/common';
-import { CreateFavoriteDto } from './dto/create-favorite.dto';
-import { UpdateFavoriteDto } from './dto/update-favorite.dto';
+import { ConflictException, Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Favorite } from './entities/favorite.entity';
+import { DbConnectionName } from '../db/db.config';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class FavoritesService {
-  create(createFavoriteDto: CreateFavoriteDto) {
-    return 'This action adds a new favorite';
+  constructor(
+    @InjectRepository(Favorite, DbConnectionName.READER)
+    private readonly readerRepository: Repository<Favorite>,
+    @InjectRepository(Favorite, DbConnectionName.EDITOR)
+    private readonly editorRepository: Repository<Favorite>,
+  ) {}
+
+  async create(userId: number, imageId: number): Promise<Favorite> {
+    // Prevent duplicates
+    const existing = await this.findOne(userId, imageId);
+    if (existing) {
+      throw new ConflictException('');
+    }
+
+    const favorite = this.editorRepository.create({ userId, imageId });
+    return this.editorRepository.save(favorite);
   }
 
-  findAll() {
-    return `This action returns all favorites`;
+  findAll(): Promise<Favorite[]> {
+    return this.readerRepository.find();
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} favorite`;
+  findOne(userId: number, imageId: number): Promise<Favorite | null> {
+    return this.readerRepository.findOne({
+      where: { userId, imageId },
+    });
   }
 
-  update(id: number, updateFavoriteDto: UpdateFavoriteDto) {
-    return `This action updates a #${id} favorite`;
+  findAllByUser(userId: number): Promise<Favorite[]> {
+    return this.readerRepository.findBy({ userId });
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} favorite`;
+  findAllByImage(imageId: number): Promise<Favorite[]> {
+    return this.readerRepository.findBy({ imageId });
+  }
+
+  countByImage(imageId: number): Promise<number> {
+    return this.readerRepository.count({ where: { imageId } });
+  }
+
+  async remove(userId: number, imageId: number): Promise<Favorite | null> {
+    const favorite = await this.findOne(userId, imageId);
+
+    if (!favorite) {
+      return null;
+    } else {
+      await this.editorRepository.delete({ userId, imageId });
+      return favorite;
+    }
   }
 }
