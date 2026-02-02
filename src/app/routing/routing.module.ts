@@ -4,6 +4,7 @@ import { ApiModule } from '../api/api.module';
 import { AuthModule } from '../auth/auth.module';
 import { UsersModule } from '../users/users.module';
 import { TagsModule } from '../tags/tags.module';
+import { FavoritesModule } from '../favorites/favorites.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { TagsModule } from '../tags/tags.module';
           { path: 'auth', module: AuthModule },
           { path: 'users', module: UsersModule },
           { path: 'tags', module: TagsModule },
+          { path: 'favorites', module: FavoritesModule },
         ],
       },
     ]),
