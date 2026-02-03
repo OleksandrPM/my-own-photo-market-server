@@ -1,26 +1,44 @@
-import { Injectable } from '@nestjs/common';
-import { CreateImageTagDto } from './dto/create-image-tag.dto';
-import { UpdateImageTagDto } from './dto/update-image-tag.dto';
+import { ConflictException, Injectable } from '@nestjs/common';
+import { ImageTag } from './entities/image-tag.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { DbConnectionName } from '../db/db.config';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class ImageTagsService {
-  create(createImageTagDto: CreateImageTagDto) {
-    return 'This action adds a new imageTag';
+  constructor(
+    @InjectRepository(ImageTag, DbConnectionName.READER)
+    private readonly readerRepository: Repository<ImageTag>,
+    @InjectRepository(ImageTag, DbConnectionName.EDITOR)
+    private readonly editorRepository: Repository<ImageTag>,
+  ) {}
+
+  async create(imageId: number, tagId: number): Promise<ImageTag> {
+    // Prevent duplicates
+    const existing = await this.findOne(imageId, tagId);
+    if (existing) {
+      throw new ConflictException('');
+    }
+
+    const imageTag = this.editorRepository.create({ imageId, tagId });
+    return this.editorRepository.save(imageTag);
   }
 
-  findAll() {
-    return `This action returns all imageTags`;
+  findAll(): Promise<ImageTag[]> {
+    return this.readerRepository.find();
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} imageTag`;
+  findOne(imageId: number, tagId: number): Promise<ImageTag | null> {
+    return this.readerRepository.findOne({
+      where: { imageId, tagId },
+    });
   }
 
-  update(id: number, updateImageTagDto: UpdateImageTagDto) {
-    return `This action updates a #${id} imageTag`;
+  findAllByImage(imageId: number): Promise<ImageTag[]> {
+    return this.readerRepository.findBy({ imageId });
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} imageTag`;
+  findAllByTag(tagId: number): Promise<ImageTag[]> {
+    return this.readerRepository.findBy({ tagId });
   }
 }

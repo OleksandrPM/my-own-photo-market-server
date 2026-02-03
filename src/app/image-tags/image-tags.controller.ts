@@ -1,15 +1,20 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param } from '@nestjs/common';
 import { ImageTagsService } from './image-tags.service';
 import { CreateImageTagDto } from './dto/create-image-tag.dto';
-import { UpdateImageTagDto } from './dto/update-image-tag.dto';
+import { Roles } from '../auth/roles.decorator';
+import { UserRole } from '../users/entities/user.entity';
 
 @Controller('image-tags')
 export class ImageTagsController {
   constructor(private readonly imageTagsService: ImageTagsService) {}
 
+  @Roles(UserRole.ADMIN)
   @Post()
   create(@Body() createImageTagDto: CreateImageTagDto) {
-    return this.imageTagsService.create(createImageTagDto);
+    return this.imageTagsService.create(
+      createImageTagDto.imageId,
+      createImageTagDto.tagId,
+    );
   }
 
   @Get()
@@ -17,18 +22,18 @@ export class ImageTagsController {
     return this.imageTagsService.findAll();
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.imageTagsService.findOne(+id);
+  @Get('image/:imageId/tag/:tagId')
+  findOne(@Param('imageId') imageId: string, @Param('tagId') tagId: string) {
+    return this.imageTagsService.findOne(Number(imageId), Number(tagId));
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateImageTagDto: UpdateImageTagDto) {
-    return this.imageTagsService.update(+id, updateImageTagDto);
+  @Get('image/:imageId')
+  findAllByImage(@Param('imageId') imageId: string) {
+    return this.imageTagsService.findAllByImage(Number(imageId));
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.imageTagsService.remove(+id);
+  @Get('tag/:tagId')
+  findAllByTag(@Param('tagId') tagId: string) {
+    return this.imageTagsService.findAllByTag(Number(tagId));
   }
 }
