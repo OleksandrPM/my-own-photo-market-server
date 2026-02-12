@@ -1,32 +1,30 @@
 import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app/app.module';
 import { ConfigService } from '@nestjs/config';
 import { ValidationPipe } from '@nestjs/common';
-import { AppModule } from './app/app.module';
-
-// TODO: remove dotenv if unused
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {
-    cors: {
-      origin: process.env.ORIGIN_URL || 'http://localhost:3000',
-      credentials: true,
-    },
+  const app = await NestFactory.create(AppModule);
+
+  const config = app.get(ConfigService);
+
+  app.enableCors({
+    origin: config.get<string>('ORIGIN_URL') ?? 'http://localhost:3000',
+    credentials: true,
   });
 
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true, // strips unknown fields
+      whitelist: true,
       forbidNonWhitelisted: false,
-      transform: true, // converts payloads to DTO instances
+      transform: true,
       transformOptions: {
         enableImplicitConversion: true,
       },
     }),
   );
 
-  const config = app.get(ConfigService);
-
-  const port = parseInt(config.get<string>('PORT') ?? '3001', 10);
+  const port = config.get<number>('PORT') ?? 3001;
 
   await app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
