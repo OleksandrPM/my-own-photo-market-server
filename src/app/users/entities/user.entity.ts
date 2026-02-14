@@ -11,10 +11,10 @@ export class User {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ name: 'email', type: 'text', unique: true })
+  @Column({ type: 'text', unique: true })
   email: string;
 
-  @Column({ name: 'username', type: 'text', nullable: true })
+  @Column({ type: 'text', nullable: true })
   username: string;
 
   @Exclude()
@@ -22,7 +22,6 @@ export class User {
   passwordHash: string;
 
   @Column({
-    name: 'role',
     type: 'enum',
     enum: UserRole,
     default: UserRole.USER,
@@ -44,6 +43,6 @@ export class User {
   })
   updatedAt: Date;
 
-  @Column({ name: 'avatar_url', type: 'text', nullable: true })
-  avatarUrl: string;
+  @Column({ name: 'avatar_key', type: 'text', nullable: true })
+  avatarKey: string;
 }
