@@ -1,5 +1,6 @@
 import { IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
-import { UserRole } from '../entities/user.entity';
+
+// TODO: Think about adding fields like emailVerified etc.
 
 export class CreateUserDto {
   @IsEmail()
@@ -12,11 +13,4 @@ export class CreateUserDto {
   @IsString()
   @MinLength(8)
   password: string;
-
-  @IsString()
-  role: UserRole;
-
-  @IsOptional()
-  @IsString()
-  avatarUrl?: string;
 }
