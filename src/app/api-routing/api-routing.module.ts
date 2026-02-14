@@ -6,6 +6,7 @@ import { UsersModule } from '../users/users.module';
 import { TagsModule } from '../tags/tags.module';
 import { FavoritesModule } from '../favorites/favorites.module';
 import { ImagesModule } from '../images/images.module';
+import { ImageTagsModule } from '../image-tags/image-tags.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { ImagesModule } from '../images/images.module';
     ImagesModule,
     TagsModule,
     FavoritesModule,
+    ImageTagsModule,
     RouterModule.register([
       {
         path: 'api',
@@ -25,6 +27,7 @@ import { ImagesModule } from '../images/images.module';
           { path: 'images', module: ImagesModule },
           { path: 'tags', module: TagsModule },
           { path: 'favorites', module: FavoritesModule },
+          { path: 'image-tags', module: ImageTagsModule },
         ],
       },
     ]),

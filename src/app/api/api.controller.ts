@@ -9,10 +9,11 @@ export class ApiController {
       version: '1.0.0',
       message: 'Welcome to the API root endpoint',
       endpoints: {
-        tags: '/api/tags',
-        images: '/api/images',
         auth: '/api/auth',
         users: '/api/users',
+        images: '/api/images',
+        tags: '/api/tags',
+        imageTags: '/api/image-tags',
       },
     };
   }
