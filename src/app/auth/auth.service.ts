@@ -4,6 +4,8 @@ import { UsersService } from '../users/users.service';
 import { PasswordService } from '../password/password.service';
 import { User } from '../users/entities/user.entity';
 import { CreateUserDto } from '../users/dto/create-user.dto';
+import { SignInDto } from './dto/signin.dto';
+import { RegisterDto } from './dto/register.dto';
 
 @Injectable()
 export class AuthService {
@@ -14,21 +16,25 @@ export class AuthService {
   ) {}
 
   async signUp(
-    newUser: CreateUserDto,
-  ): Promise<User & { access_token: string }> {
-    const user = await this.usersService.create(newUser);
-    const access_token = await this.jwtService.signAsync({
+    newUser: RegisterDto,
+    avatar?: Express.Multer.File,
+  ): Promise<{ user: User; accessToken: string }> {
+    // 1. Create user
+    const user = await this.usersService.createUser(newUser, avatar);
+
+    // 2. Generate access token
+    const accessToken = await this.jwtService.signAsync({
       sub: user.id,
       email: user.email,
     });
 
-    return { ...user, access_token };
+    return { user, accessToken };
   }
 
-  async signIn(
-    email: string,
-    password: string,
-  ): Promise<User & { access_token: string }> {
+  async signIn({
+    email,
+    password,
+  }: SignInDto): Promise<{ user: User; accessToken: string }> {
     const user = await this.usersService.findByEmail(email);
 
     if (user) {
@@ -38,12 +44,12 @@ export class AuthService {
       );
 
       if (isPasswordLegal) {
-        const access_token = await this.jwtService.signAsync({
+        const accessToken = await this.jwtService.signAsync({
           sub: user.id,
           email: user.email,
         });
 
-        return { ...user, access_token };
+        return { user, accessToken };
       } else {
         throw new UnauthorizedException();
       }
