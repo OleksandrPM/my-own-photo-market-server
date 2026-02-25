@@ -4,6 +4,7 @@ import {
   S3Client,
   PutObjectCommand,
   GetObjectCommand,
+  DeleteObjectCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
@@ -11,28 +12,27 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 export class R2Service {
   private readonly client: S3Client;
   private readonly bucket: string;
-  private readonly publicUrl: string;
+  private readonly cdnBaseUrl: string;
 
   constructor(private readonly config: ConfigService) {
     const accountId = this.config.get<string>('R2_ACCOUNT_ID');
     const accessKeyId = this.config.get<string>('R2_ACCESS_KEY_ID');
     const secretAccessKey = this.config.get<string>('R2_SECRET_ACCESS_KEY');
     const bucket = this.config.get<string>('R2_BUCKET');
-    const publicUrl = this.config.get<string>('R2_PUBLIC_URL');
+    const cdnBaseUrl = this.config.get<string>('R2_CDN_URL');
 
     if (
       !accountId ||
       !accessKeyId ||
       !secretAccessKey ||
       !bucket ||
-      !publicUrl
+      !cdnBaseUrl
     ) {
       throw new Error('Missing Cloudflare R2 environment variables');
     }
 
     this.bucket = bucket;
-    this.publicUrl = publicUrl;
-
+    this.cdnBaseUrl = cdnBaseUrl;
     this.client = new S3Client({
       region: 'auto',
       endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
@@ -57,7 +57,7 @@ export class R2Service {
       }),
     );
 
-    return { key };
+    return key;
   }
 
   async getObject(key: string) {
@@ -68,15 +68,33 @@ export class R2Service {
       }),
     );
 
-    return res.Body; // stream
+    return res.Body as NodeJS.ReadableStream;
   }
 
-  async getSignedUrl(key: string, expiresInSeconds = 3600) {
+  async deleteObject(key: string): Promise<string> {
+    await this.client.send(
+      new DeleteObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+      }),
+    );
+
+    return key;
+  }
+
+  async createSignedUrl(
+    key: string,
+    expiresInSeconds: number,
+  ): Promise<string> {
     const command = new GetObjectCommand({
       Bucket: this.bucket,
       Key: key,
     });
 
     return getSignedUrl(this.client, command, { expiresIn: expiresInSeconds });
+  }
+
+  getPublicUrl(key: string): string {
+    return `${this.cdnBaseUrl}/${key}`;
   }
 }
