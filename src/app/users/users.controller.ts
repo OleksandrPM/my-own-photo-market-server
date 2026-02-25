@@ -5,70 +5,110 @@ import {
   Param,
   Patch,
   Post,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { plainToInstance } from 'class-transformer';
 import { UsersService } from './users.service';
-import { User, UserRole } from './entities/user.entity';
+import { UserRole } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { Roles } from '../auth/roles.decorator';
 import { SelfOrAdminGuard } from '../auth/self-or-admin.guard';
 import { SelfOnlyGuard } from '../auth/self-only.guard';
-import { CurrentUser } from '../auth/current-user.decorator';
+import { CreateAdminDto } from './dto/create-admin.dto';
+import { UserResponseDto } from './dto/user-response.dto';
 
-@Controller('users')
+@Controller()
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   // Public
   @Post()
-  createUser(@Body() dto: CreateUserDto) {
-    return this.usersService.create(dto);
+  @UseInterceptors(FileInterceptor('avatar'))
+  async createUser(
+    @UploadedFile() avatar: Express.Multer.File | undefined,
+    @Body() dto: CreateUserDto,
+  ): Promise<UserResponseDto> {
+    const user = await this.usersService.createUser(dto, avatar);
+
+    return plainToInstance(UserResponseDto, user, {
+      excludeExtraneousValues: true,
+    });
   }
 
   // Admin
   @Roles(UserRole.ADMIN)
   @Get()
-  findAllUsers() {
-    return this.usersService.findAll();
+  async findAllUsers(): Promise<UserResponseDto[]> {
+    const users = await this.usersService.findAll();
+
+    return plainToInstance(UserResponseDto, users, {
+      excludeExtraneousValues: true,
+    });
   }
 
-  // Admin, user with own email
+  // Admin or user with own email
   @UseGuards(SelfOrAdminGuard)
   @Get('email/:email')
-  findUserByEmail(@Param('email') email: string) {
-    return this.usersService.findByEmail(email);
+  async findUserByEmail(
+    @Param('email') email: string,
+  ): Promise<UserResponseDto> {
+    const user = await this.usersService.findByEmail(email);
+
+    return plainToInstance(UserResponseDto, user, {
+      excludeExtraneousValues: true,
+    });
   }
 
-  // Admin, user with own id
+  // Admin or user with own id
   @UseGuards(SelfOrAdminGuard)
-  @Get(':id')
-  findUserById(@Param('id') id: string) {
-    return this.usersService.findById(+id);
+  @Get('id/:id')
+  async findUserById(@Param('id') id: string): Promise<UserResponseDto> {
+    const user = await this.usersService.findById(+id);
+
+    return plainToInstance(UserResponseDto, user, {
+      excludeExtraneousValues: true,
+    });
   }
 
   // User with own id
   @UseGuards(SelfOnlyGuard)
   @Patch(':id')
-  updateUser(
+  @UseInterceptors(FileInterceptor('avatar'))
+  async updateUser(
+    @UploadedFile() avatar: Express.Multer.File | undefined,
     @Param('id') id: string,
     @Body() dto: UpdateUserDto,
-    @CurrentUser() user: User,
-  ) {
-    return this.usersService.update(+id, dto, user);
+  ): Promise<UserResponseDto> {
+    const user = await this.usersService.update(+id, dto, avatar);
+
+    return plainToInstance(UserResponseDto, user, {
+      excludeExtraneousValues: true,
+    });
   }
 
   // Admin
   @Roles(UserRole.ADMIN)
   @Post('admin')
-  createAdmin(@Body() dto: CreateUserDto) {
-    return this.usersService.create({ ...dto, role: UserRole.ADMIN });
+  async createAdmin(@Body() dto: CreateAdminDto): Promise<UserResponseDto> {
+    const user = await this.usersService.createAdmin(dto);
+
+    return plainToInstance(UserResponseDto, user, {
+      excludeExtraneousValues: true,
+    });
   }
 
   // Admin
   @Roles(UserRole.ADMIN)
   @Patch('admin/:id/promote')
-  promoteToAdmin(@Param('id') id: string, @CurrentUser() user: User) {
-    return this.usersService.update(+id, { role: UserRole.ADMIN }, user);
+  async promoteToAdmin(@Param('id') id: string): Promise<UserResponseDto> {
+    const user = await this.usersService.promote(+id);
+
+    return plainToInstance(UserResponseDto, user, {
+      excludeExtraneousValues: true,
+    });
   }
 }

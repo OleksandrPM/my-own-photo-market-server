@@ -1,5 +1,11 @@
 import { Exclude } from 'class-transformer';
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 
 export enum UserRole {
   USER = 'user',
@@ -14,8 +20,8 @@ export class User {
   @Column({ type: 'text', unique: true })
   email: string;
 
-  @Column({ type: 'text', nullable: true })
-  username: string;
+  @Column({ type: 'text', nullable: true, default: null })
+  username: string | null;
 
   @Exclude()
   @Column({ name: 'password_hash', type: 'text' })
@@ -28,21 +34,12 @@ export class User {
   })
   role: UserRole;
 
-  @Column({
-    name: 'created_at',
-    type: 'timestamp',
-    default: () => 'CURRENT_TIMESTAMP',
-  })
+  @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
-  @Column({
-    name: 'updated_at',
-    type: 'timestamp',
-    default: () => 'CURRENT_TIMESTAMP',
-    onUpdate: 'CURRENT_TIMESTAMP',
-  })
+  @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 
-  @Column({ name: 'avatar_key', type: 'text', nullable: true })
+  @Column({ name: 'avatar_key', type: 'text', nullable: true, default: null })
   avatarKey: string;
 }
