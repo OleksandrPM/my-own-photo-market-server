@@ -1,5 +1,5 @@
 import { Repository } from 'typeorm';
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Tag } from './entities/tag.entity';
 import { DbConnectionName } from '../db/db.config';
@@ -11,12 +11,7 @@ export class TagsService {
     private readonly readerRepository: Repository<Tag>,
     @InjectRepository(Tag, DbConnectionName.EDITOR)
     private readonly editorRepository: Repository<Tag>,
-  ) {}
-
-  create(newTag: string): Promise<Tag> {
-    const tag = this.editorRepository.create({ tag: newTag });
-    return this.editorRepository.save(tag);
-  }
+  ) { }
 
   findAll(): Promise<Tag[]> {
     return this.readerRepository.find();
@@ -27,22 +22,58 @@ export class TagsService {
   }
 
   findByName(name: string): Promise<Tag | null> {
-    return this.readerRepository.findOneBy({ tag: name });
+    return this.readerRepository.findOneBy({ name });
   }
 
-  async update(id: number, updatedTag: string): Promise<Tag | null> {
-    return this.editorRepository
-      .update({ id }, { tag: updatedTag })
-      .then(() => this.findById(id));
+  async create(name: string): Promise<Tag> {
+    const isTAgExists = await this.findByName(name);
+    if (isTAgExists) {
+      throw new ConflictException(`Tag with name ${name} already exists`);
+    }
+    const tag = this.editorRepository.create({ name });
+    return this.editorRepository.save(tag);
   }
 
-  async remove(id: number): Promise<Tag | null> {
+  async updateById(id: number, updatedTag: string): Promise<Tag | null> {
+    const existingTag = await this.findById(id);
+
+    if (!existingTag) {
+      return null;
+    }
+
+    await this.editorRepository.update({ id }, { name: updatedTag });
+    return this.findById(id);
+  }
+
+  async updateByName(tagName: string, newTagName: string): Promise<Tag | null> {
+    const existingTag = await this.findByName(tagName);
+
+    if (!existingTag) {
+      return null;
+    }
+
+    await this.editorRepository.update({ name: tagName }, { name: newTagName });
+    return this.findByName(newTagName);
+  }
+
+  async removeById(id: number): Promise<Tag | null> {
     const tag = await this.findById(id);
     if (!tag) {
       return null;
     } else {
       await this.editorRepository.delete({ id });
       return tag;
+    }
+  }
+
+  async removeByName(name: string): Promise<Tag | null> {
+    const existingTag = await this.findByName(name);
+
+    if (!existingTag) {
+      return null;
+    } else {
+      await this.editorRepository.delete({ name });
+      return existingTag;
     }
   }
 }
