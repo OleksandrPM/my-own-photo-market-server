@@ -3,24 +3,29 @@ import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import { PasswordService } from '../password/password.service';
 import { User } from '../users/entities/user.entity';
-import { CreateUserDto } from '../users/dto/create-user.dto';
 import { SignInDto } from './dto/signin.dto';
 import { RegisterDto } from './dto/register.dto';
+import { R2Service } from '../r2/r2.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly usersService: UsersService,
     private readonly passwordService: PasswordService,
-    private jwtService: JwtService,
+    private readonly jwtService: JwtService,
+    private readonly r2Service: R2Service,
   ) {}
 
   async signUp(
-    newUser: RegisterDto,
+    newUserDto: RegisterDto,
     avatar?: Express.Multer.File,
-  ): Promise<{ user: User; accessToken: string }> {
+  ): Promise<{ user: User; accessToken: string; avatarUrl: string | null }> {
     // 1. Create user
-    const user = await this.usersService.createUser(newUser, avatar);
+    const user = await this.usersService.createUser(newUserDto, avatar);
+
+    if (!user) {
+      throw new Error('User creation failed');
+    }
 
     // 2. Generate access token
     const accessToken = await this.jwtService.signAsync({
@@ -28,13 +33,19 @@ export class AuthService {
       email: user.email,
     });
 
-    return { user, accessToken };
+    // 3. Build avatar URL if avatar was uploaded
+    const avatarUrl = user.avatarKey
+      ? await this.r2Service.createSignedUrl(user.avatarKey, 3600)
+      : null;
+
+    return { user, accessToken, avatarUrl };
   }
 
-  async signIn({
-    email,
-    password,
-  }: SignInDto): Promise<{ user: User; accessToken: string }> {
+  async signIn({ email, password }: SignInDto): Promise<{
+    user: User;
+    accessToken: string;
+    avatarUrl: string | null;
+  }> {
     const user = await this.usersService.findByEmail(email);
 
     if (user) {
@@ -49,12 +60,17 @@ export class AuthService {
           email: user.email,
         });
 
-        return { user, accessToken };
+        // 3. Build avatar URL if avatar was uploaded
+        const avatarUrl = user.avatarKey
+          ? await this.r2Service.createSignedUrl(user.avatarKey, 3600)
+          : null;
+
+        return { user, accessToken, avatarUrl };
       } else {
-        throw new UnauthorizedException();
+        throw new UnauthorizedException('Incorrect password');
       }
     } else {
-      throw new UnauthorizedException();
+      throw new UnauthorizedException(`User with email ${email} not found`);
     }
   }
 }

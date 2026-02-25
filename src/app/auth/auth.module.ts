@@ -5,6 +5,7 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { UsersModule } from '../users/users.module';
 import { PasswordModule } from '../password/password.module';
+import { R2Module } from '../r2/r2.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { PasswordModule } from '../password/password.module';
     }),
     UsersModule,
     PasswordModule,
+    R2Module,
   ],
   providers: [AuthService],
   controllers: [AuthController],
