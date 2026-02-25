@@ -14,7 +14,7 @@ import { UserRole } from '../users/entities/user.entity';
 import { SelfOnlyGuard } from '../auth/self-only.guard';
 import { SelfOrAdminGuard } from '../auth/self-or-admin.guard';
 
-@Controller('favorites')
+@Controller()
 export class FavoritesController {
   constructor(private readonly favoritesService: FavoritesService) {}
 

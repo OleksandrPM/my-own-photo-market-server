@@ -4,7 +4,7 @@ import { CreateImageTagDto } from './dto/create-image-tag.dto';
 import { Roles } from '../auth/roles.decorator';
 import { UserRole } from '../users/entities/user.entity';
 
-@Controller('image-tags')
+@Controller()
 export class ImageTagsController {
   constructor(private readonly imageTagsService: ImageTagsService) {}
 

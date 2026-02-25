@@ -9,7 +9,9 @@ export class ImagesService {
   }
 
   findAll() {
-    return `This action returns all images`;
+    // TODO: Implement pagination and filtering logic
+
+    return 'This action returns all thumb images. Add pagination and filtering later.';
   }
 
   findOne(id: number) {
