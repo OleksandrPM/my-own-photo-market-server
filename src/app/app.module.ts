@@ -5,11 +5,13 @@ import { AppController } from './app.controller';
 import { RolesGuard } from './auth/roles.guard';
 import { DatabaseModule } from './db/db.module';
 import { ApiRoutingModule } from './api-routing/api-routing.module';
+import { StorageModule } from './storage/storage.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     DatabaseModule,
+    StorageModule,
     ApiRoutingModule,
   ],
   controllers: [AppController],
