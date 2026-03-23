@@ -1,17 +1,38 @@
-// eslint.config.js
+// eslint.config.mjs
 import eslint from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import globals from 'globals';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-export default tseslint.config(
-  { ignores: ['dist'] },
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-  eslint.configs.recommended,
-
-  ...tseslint.configs.recommended,
-
+export default [
   {
+    ignores: ['dist'],
+  },
+
+  // JS rules only — no TS parser here
+  {
+    ...eslint.configs.recommended,
+    files: ['**/*.js', '**/*.mjs', '**/*.cjs'],
+  },
+
+  // Non-type-aware TS rules
+  {
+    ...tseslint.configs.recommended[0],
+    files: ['src/**/*.ts'],
+  },
+
+  // Type-aware TS rules (the part that needs tsconfigRootDir)
+  {
+    files: ['src/**/*.ts'],
     languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.json'],
+        tsconfigRootDir: __dirname,
+      },
       globals: {
         ...globals.node,
       },
@@ -21,4 +42,4 @@ export default tseslint.config(
       '@typescript-eslint/no-explicit-any': 'off',
     },
   },
-);
+];
