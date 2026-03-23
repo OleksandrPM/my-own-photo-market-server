@@ -34,12 +34,15 @@ export class User {
   })
   role: UserRole;
 
+  @Column({ name: 'avatar_key', type: 'text', nullable: true, default: null })
+  avatarKey: string | null;
+
+  @Column({ name: 'is_verified', type: 'boolean', default: false })
+  isVerified: boolean;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
-
-  @Column({ name: 'avatar_key', type: 'text', nullable: true, default: null })
-  avatarKey: string;
 }
