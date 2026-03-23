@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { BrevoClient } from '@getbrevo/brevo';
+import { EmailSubject } from './email.types';
 
 @Injectable()
-export class MailService {
+export class EmailService {
   private brevo: BrevoClient;
 
   constructor(private readonly config: ConfigService) {
@@ -15,7 +16,7 @@ export class MailService {
     this.brevo = new BrevoClient({ apiKey });
   }
 
-  async sendEmail(to: string, subject: string, html: string) {
+  async sendEmail(to: string, subject: EmailSubject, html: string) {
     const from = this.config.get<string>('BREVO_FROM');
     if (!from) {
       throw new Error('BREVO_FROM is missing');
