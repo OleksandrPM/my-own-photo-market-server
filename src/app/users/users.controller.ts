@@ -15,18 +15,22 @@ import { UsersService } from './users.service';
 import { UserRole } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { Roles } from '../auth/roles.decorator';
-import { SelfOrAdminGuard } from '../auth/self-or-admin.guard';
-import { SelfOnlyGuard } from '../auth/self-only.guard';
 import { CreateAdminDto } from './dto/create-admin.dto';
 import { UserResponseDto } from './dto/user-response.dto';
+import { Roles } from '../common/decorators/roles.decorator';
+import { SelfOrAdminGuard } from '../auth/guards/self-or-admin.guard';
+import { SelfOnlyGuard } from '../auth/guards/self-only.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
 
 @Controller()
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  // Public
+  // Admin
   @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
   @UseInterceptors(FileInterceptor('avatar'))
   async createUser(
     @UploadedFile() avatar: Express.Multer.File | undefined,
@@ -40,6 +44,7 @@ export class UsersController {
   }
 
   // Admin
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @Get()
   async findAllUsers(): Promise<UserResponseDto[]> {

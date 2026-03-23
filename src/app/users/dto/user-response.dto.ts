@@ -9,6 +9,9 @@ export class UserResponseDto {
   email: string;
 
   @Expose()
+  isVerified: boolean;
+
+  @Expose()
   username: string | null;
 
   @Expose()

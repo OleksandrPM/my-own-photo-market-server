@@ -170,10 +170,17 @@ export class UsersService {
     return this.findById(id);
   }
 
+  async markEmailVerified(id: number) {
+    await this.getExistingUserOrThrow(id);
+    await this.editorRepository.update(id, { isVerified: true });
+
+    return this.findById(id);
+  }
+
   async promote(id: number) {
     await this.getExistingUserOrThrow(id);
-
     await this.editorRepository.update(id, { role: UserRole.ADMIN });
+
     return this.findById(id);
   }
 
