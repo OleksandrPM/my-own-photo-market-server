@@ -1,11 +1,13 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
-import { AppController } from './app.controller';
+import { ConfigModule } from '@nestjs/config';
 import { DatabaseModule } from './db/db.module';
 import { StorageModule } from './storage/storage.module';
-import { RolesGuard } from './auth/guards/roles.guard';
 import { ApiModule } from './api/api.module';
+import { AppController } from './app.controller';
+import { RolesGuard } from './auth/guards/roles.guard';
+import { OriginGuard } from './common/guards/origin.guard';
+
 
 @Module({
   imports: [
@@ -15,6 +17,15 @@ import { ApiModule } from './api/api.module';
     ApiModule,
   ],
   controllers: [AppController],
-  providers: [{ provide: APP_GUARD, useClass: RolesGuard }],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: OriginGuard, // 1st global guard
+    },
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard, // 2nd global guard
+    },
+  ],
 })
 export class AppModule {}
