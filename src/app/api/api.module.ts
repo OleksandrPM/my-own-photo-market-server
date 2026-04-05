@@ -10,10 +10,12 @@ import { RouterModule } from '@nestjs/core';
 import { ApiRoutes } from '../path-builder/api.routes';
 import { ApiService } from './api.service';
 import { PathBuilderModule } from '../path-builder/path-builder.module';
+import { SetupModule } from '../setup/setup.module';
 
 @Module({
   imports: [
     PathBuilderModule,
+    SetupModule,
     AuthModule,
     UsersModule,
     ImagesModule,
@@ -25,6 +27,7 @@ import { PathBuilderModule } from '../path-builder/path-builder.module';
         path: `${process.env.API_PREFIX ?? 'api'}/${process.env.API_VERSION ?? 'v1'}`,
         module: ApiModule,
         children: [
+          { path: `${ApiRoutes.SETUP.BASE}`, module: SetupModule },
           { path: `${ApiRoutes.AUTH.BASE}`, module: AuthModule },
           { path: `${ApiRoutes.USERS.BASE}`, module: UsersModule },
           { path: `${ApiRoutes.IMAGES.BASE}`, module: ImagesModule },
