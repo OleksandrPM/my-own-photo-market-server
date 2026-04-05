@@ -3,26 +3,26 @@ import { UserRole } from '../entities/user.entity';
 
 export class UserResponseDto {
   @Expose()
-  id: number;
+  id!: number;
 
   @Expose()
-  email: string;
+  email!: string;
 
   @Expose()
-  isVerified: boolean;
+  isVerified!: boolean;
 
   @Expose()
-  username: string | null;
+  username!: string | null;
 
   @Expose()
-  role: UserRole;
+  role!: UserRole;
 
   @Expose()
-  avatarKey: string | null;
+  avatarKey!: string | null;
 
   @Expose()
-  createdAt: Date;
+  createdAt!: Date;
 
   @Expose()
-  updatedAt: Date;
+  updatedAt!: Date;
 }

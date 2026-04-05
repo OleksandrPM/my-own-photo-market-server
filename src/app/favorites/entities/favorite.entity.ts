@@ -13,23 +13,23 @@ import { User } from 'src/app/users/entities/user.entity';
 @Entity('favorites')
 export class Favorite {
   @PrimaryColumn({ name: 'user_id' })
-  userId: number;
+  userId!: number;
 
   @PrimaryColumn({ name: 'image_id' })
-  imageId: number;
+  imageId!: number;
 
   @Column({
     name: 'added_at',
     type: 'timestamp',
     default: () => 'CURRENT_TIMESTAMP',
   })
-  addedAt: Date;
+  addedAt!: Date;
 
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
-  user: User;
+  user!: User;
 
   @ManyToOne(() => Image, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'image_id' })
-  image: Image;
+  image!: Image;
 }

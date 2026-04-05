@@ -2,8 +2,8 @@ import { IsNumber } from 'class-validator';
 
 export class CreateImageTagDto {
   @IsNumber()
-  imageId: number;
+  imageId!: number;
 
   @IsNumber()
-  tagId: number;
+  tagId!: number;
 }

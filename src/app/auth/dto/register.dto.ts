@@ -12,16 +12,16 @@ import {
 export class RegisterDto {
   @ApiProperty()
   @IsEmail()
-  email: string;
+  email!: string;
 
   @ApiProperty({ required: false, nullable: true })
   @IsOptional()
   @IsString()
-  username: string | null;
+  username!: string | null;
 
   @ApiProperty({ minLength: 8 })
   @IsString()
   @IsStrongPassword()
   @MinLength(8)
-  password: string;
+  password!: string;
 }

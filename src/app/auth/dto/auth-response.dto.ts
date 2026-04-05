@@ -3,11 +3,11 @@ import { UserResponseDto } from 'src/app/users/dto/user-response.dto';
 
 export class AuthResponseDto {
   @Expose()
-  user: UserResponseDto;
+  user!: UserResponseDto;
 
   @Expose()
-  accessToken: string;
+  accessToken!: string;
 
   @Expose()
-  avatarUrl: string | null;
+  avatarUrl!: string | null;
 }

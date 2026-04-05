@@ -6,16 +6,16 @@ import { Entity, JoinColumn, ManyToOne, PrimaryColumn, Unique } from 'typeorm';
 @Entity('image_tags')
 export class ImageTag {
   @PrimaryColumn({ name: 'image_id' })
-  imageId: number;
+  imageId!: number;
 
   @PrimaryColumn({ name: 'tag_id' })
-  tagId: number;
+  tagId!: number;
 
   @ManyToOne(() => Image, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'image_id' })
-  image: Image;
+  image!: Image;
 
   @ManyToOne(() => Tag, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'tag_id' })
-  tag: Tag;
+  tag!: Tag;
 }

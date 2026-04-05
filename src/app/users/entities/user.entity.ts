@@ -15,34 +15,34 @@ export enum UserRole {
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column({ type: 'text', unique: true })
-  email: string;
+  email!: string;
 
   @Column({ type: 'text', nullable: true, default: null })
-  username: string | null;
+  username!: string | null;
 
   @Exclude()
   @Column({ name: 'password_hash', type: 'text' })
-  passwordHash: string;
+  passwordHash!: string;
 
   @Column({
     type: 'enum',
     enum: UserRole,
     default: UserRole.USER,
   })
-  role: UserRole;
+  role!: UserRole;
 
   @Column({ name: 'avatar_key', type: 'text', nullable: true, default: null })
-  avatarKey: string | null;
+  avatarKey!: string | null;
 
   @Column({ name: 'is_verified', type: 'boolean', default: false })
-  isVerified: boolean;
+  isVerified!: boolean;
 
   @CreateDateColumn({ name: 'created_at' })
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn({ name: 'updated_at' })
-  updatedAt: Date;
+  updatedAt!: Date;
 }

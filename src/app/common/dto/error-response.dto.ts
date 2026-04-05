@@ -2,11 +2,11 @@ import { ApiProperty } from '@nestjs/swagger';
 
 export class ErrorResponseDto {
   @ApiProperty({ example: 401 })
-  statusCode: number;
+  statusCode!: number;
 
   @ApiProperty({ example: 'Unauthorized' })
-  error: string;
+  error!: string;
 
   @ApiProperty({ example: 'Invalid authentication token' })
-  message: string;
+  message!: string;
 }
