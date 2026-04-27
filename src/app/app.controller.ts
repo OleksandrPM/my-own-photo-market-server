@@ -1,19 +1,26 @@
 import { Controller, Get } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { PathBuilderService } from './common/path-builder/path-builder.service';
+import { ApiOkResponse, ApiOperation } from '@nestjs/swagger';
 
 @Controller()
 export class AppController {
-  constructor(private readonly config: ConfigService) {}
+  constructor(private readonly pathBuilder: PathBuilderService) {}
 
   @Get()
+  @ApiOperation({ summary: 'App root endpoint' })
+  @ApiOkResponse({
+    description: 'Welcome message with API endpoint',
+    example: {
+      status: 'ok',
+      message: 'Welcome to the my-own-photo-market backend',
+      api: 'path/to/api',
+    },
+  })
   root() {
-    const apiPrefix = this.config.get<string>('API_PREFIX');
-    const versionPrefix = this.config.get<string>('API_VERSION');
-
     return {
       status: 'ok',
       message: 'Welcome to the my-own-photo-market backend',
-      api: `/${apiPrefix}/${versionPrefix}`,
+      api: this.pathBuilder.getApiRootPath(),
     };
   }
 }
