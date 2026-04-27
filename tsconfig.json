@@ -23,6 +23,6 @@
     "paths": {
       "src/*": ["./src/*"]
     },
-    "types": ["node", "multer"]
+    "types": ["node", "multer", "jest"]
   }
 }
