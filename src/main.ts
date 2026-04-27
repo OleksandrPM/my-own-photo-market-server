@@ -2,14 +2,17 @@ import { NestFactory, Reflector } from '@nestjs/core';
 import { AppModule } from './app/app.module';
 import { ConfigService } from '@nestjs/config';
 import { ClassSerializerInterceptor, ValidationPipe } from '@nestjs/common';
-import { setupSwagger } from './app/swagger/swagger.setup';
+import { setupSwagger } from './app/system/swagger/swagger.setup';
 import { NotFoundFilter } from './app/common/filters/not-found.filter';
 import { HttpExceptionFilter } from './app/common/filters/http-exception.filter';
+import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   const config = app.get(ConfigService);
+
+  app.use(cookieParser());
 
   app.enableCors({
     origin: config.get<string>('ORIGIN_URL') ?? 'http://localhost:3000',
