@@ -1,4 +1,4 @@
-import { UserRole } from 'src/app/users/entities/user.entity';
+import { UserRole } from 'src/app/product/profiles/user.types';
 
 declare global {
   namespace Express {
