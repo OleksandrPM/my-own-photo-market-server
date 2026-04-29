@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { DbConnectionName } from '../database.config';
 import { TagOrmEntity } from './tag.orm-entity';
 
@@ -56,5 +56,23 @@ export class TagsRepository {
 
   deleteByName(name: string) {
     return this.editor.delete({ name });
+  }
+
+  async createMany(names: string[]): Promise<TagOrmEntity[]> {
+    const uniqueNames = [...new Set(names)];
+
+    // WRITE (editor connection)
+    await this.editor
+      .createQueryBuilder()
+      .insert()
+      .into(TagOrmEntity)
+      .values(uniqueNames.map((name) => ({ name })))
+      .orIgnore()
+      .execute();
+
+    // READ (reader connection)
+    return this.reader.find({
+      where: { name: In(uniqueNames) },
+    });
   }
 }
