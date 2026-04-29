@@ -37,6 +37,12 @@ export class TagsService {
     return Tag.fromOrm(tagOrm);
   }
 
+  async createMany(newTags: string[]): Promise<Tag[]> {
+    const tagsOrm = await this.tagsRepository.createMany(newTags);
+
+    return tagsOrm.map(Tag.fromOrm);
+  }
+
   async updateById(id: number, updatedTag: string): Promise<Tag | null> {
     const existingTag = await this.findById(id);
 
