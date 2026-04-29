@@ -17,10 +17,14 @@ export class HttpExceptionFilter implements ExceptionFilter {
       const status = exception.getStatus();
       const res = exception.getResponse();
 
-      const message =
-        typeof res === 'string'
-          ? res
-          : (res as any).message || 'Unexpected error';
+      let message = 'Unexpected error';
+
+      if (typeof res === 'string') {
+        message = res;
+      } else if (typeof res === 'object' && res !== null && 'message' in res) {
+        const m = (res as { message?: string | string[] }).message;
+        message = Array.isArray(m) ? m[0] : (m ?? message);
+      }
 
       const errorResponse: ErrorResponseDto = {
         statusCode: status,
@@ -31,6 +35,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       return response.status(status).json(errorResponse);
     }
 
+    // Non-HttpException → 500
     const errorResponse: ErrorResponseDto = {
       statusCode: 500,
       error: 'Internal Server Error',

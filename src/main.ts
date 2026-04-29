@@ -3,7 +3,6 @@ import { AppModule } from './app/app.module';
 import { ConfigService } from '@nestjs/config';
 import { ClassSerializerInterceptor, ValidationPipe } from '@nestjs/common';
 import { setupSwagger } from './app/system/swagger/swagger.setup';
-import { NotFoundFilter } from './app/common/filters/not-found.filter';
 import { HttpExceptionFilter } from './app/common/filters/http-exception.filter';
 import cookieParser from 'cookie-parser';
 
@@ -34,7 +33,7 @@ async function bootstrap() {
 
   setupSwagger(app);
 
-  app.useGlobalFilters(new HttpExceptionFilter(), new NotFoundFilter());
+  app.useGlobalFilters(new HttpExceptionFilter());
 
   const port = config.get<number>('PORT') ?? 3001;
 
