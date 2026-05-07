@@ -1,39 +1,30 @@
 import { Module } from '@nestjs/common';
-import { ApiController } from './api.controller';
-import { AuthModule } from '../auth/auth.module';
-import { UsersModule } from '../users/users.module';
-import { ImagesModule } from '../images/images.module';
-import { TagsModule } from '../tags/tags.module';
-import { FavoritesModule } from '../favorites/favorites.module';
-import { ImageTagsModule } from '../image-tags/image-tags.module';
 import { RouterModule } from '@nestjs/core';
-import { ApiRoutes } from '../path-builder/api.routes';
+import { ApiController } from './api.controller';
 import { ApiService } from './api.service';
-import { PathBuilderModule } from '../path-builder/path-builder.module';
-import { SetupModule } from '../setup/setup.module';
+import { SetupModule } from '../system/setup/setup.module';
+import { AuthModule } from '../system/auth/auth.module';
+// import { ImagesModule } from '../images/images.module';
+import { TagsModule } from '../product/tags/tags.module';
+import { apiRoutes } from '../common/path-builder/api.routes';
+import { PathBuilderModule } from '../common/path-builder/path-builder.module';
 
 @Module({
   imports: [
     PathBuilderModule,
     SetupModule,
     AuthModule,
-    UsersModule,
-    ImagesModule,
+    // ImagesModule,
     TagsModule,
-    FavoritesModule,
-    ImageTagsModule,
     RouterModule.register([
       {
         path: `${process.env.API_PREFIX ?? 'api'}/${process.env.API_VERSION ?? 'v1'}`,
         module: ApiModule,
         children: [
-          { path: `${ApiRoutes.SETUP.BASE}`, module: SetupModule },
-          { path: `${ApiRoutes.AUTH.BASE}`, module: AuthModule },
-          { path: `${ApiRoutes.USERS.BASE}`, module: UsersModule },
-          { path: `${ApiRoutes.IMAGES.BASE}`, module: ImagesModule },
-          { path: `${ApiRoutes.TAGS.BASE}`, module: TagsModule },
-          { path: `${ApiRoutes.IMAGE_TAGS.BASE}`, module: ImageTagsModule },
-          { path: `${ApiRoutes.FAVORITES.BASE}`, module: FavoritesModule },
+          { path: `${apiRoutes.SETUP.BASE}`, module: SetupModule },
+          { path: `${apiRoutes.AUTH.BASE}`, module: AuthModule },
+          // { path: `${apiRoutes.IMAGES.BASE}`, module: ImagesModule },
+          { path: `${apiRoutes.TAGS.BASE}`, module: TagsModule },
         ],
       },
     ]),
