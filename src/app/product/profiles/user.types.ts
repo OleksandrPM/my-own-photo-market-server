@@ -4,7 +4,7 @@ export enum UserRole {
 }
 
 export interface AuthenticatedUser {
-  id: string;
+  id: number;
   email: string;
   role: UserRole;
   isVerified: boolean;
