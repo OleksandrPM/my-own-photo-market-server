@@ -29,7 +29,7 @@ import { UpdateTagDto } from './dto/update-tag.dto';
 import { CreateTagDto } from './dto/create-tag.dto';
 import { UserRole } from '../profiles/user.types';
 
-@ApiTags('Tags')
+@ApiTags('tags')
 @Controller()
 export class TagsController {
   constructor(private readonly tagsService: TagsService) {}
