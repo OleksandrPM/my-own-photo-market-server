@@ -1,4 +1,9 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { verifyPassword } from '../../common/utils/password.utils';
 import { LoginDto } from './dto/login.dto';
@@ -10,9 +15,14 @@ import { EmailManagerService } from '../communications/email/email-manager.servi
 import { ProfileResponseDto } from 'src/app/product/profiles/dto/profile-response.dto';
 import { AvatarStorageService } from 'src/app/infrastructure/storage/image-storage/avatar-storage.service';
 import { UsersRepository } from 'src/app/infrastructure/data/database/users/users.repository';
+import { AuthResult, RefreshResult } from './auth.types';
+import { Warning, WarningCode, warningService } from 'src/app/common/warning';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+  private readonly warnings = warningService;
+
   constructor(
     private readonly profilesService: ProfilesService,
     private readonly usersRepository: UsersRepository,
@@ -21,46 +31,34 @@ export class AuthService {
     private readonly avatarStorageService: AvatarStorageService,
   ) {}
 
-  async signUp(
-    dto: RegisterDto,
-    avatar?: Express.Multer.File,
-  ): Promise<{
-    user: ProfileResponseDto;
-    accessToken: string;
-    refreshToken: string;
-    deviceId: string;
-  }> {
-    const user = await this.profilesService.createUserProfile(dto, avatar);
+  private async issueAuthResult(
+    user: UserEntity,
+    warning?: Warning,
+  ): Promise<AuthResult> {
+    let avatarUrl: string | null = null;
 
-    if (!user) {
-      throw new Error('User creation failed');
+    if (user.avatarKey) {
+      try {
+        avatarUrl = await this.avatarStorageService.getAvatarUrl(
+          user.avatarKey,
+        );
+      } catch (e) {
+        this.logger.warn(
+          `Avatar URL resolve failed`,
+          JSON.stringify({ userId: user.id, avatarKey: user.avatarKey }),
+          e instanceof Error ? e.stack : undefined,
+        );
+
+        warning ??= this.warnings.create(WarningCode.AVATAR_URL_RESOLVE_FAILED);
+      }
     }
 
-    const confirmationToken =
-      await this.tokenService.createEmailConfirmationToken(user);
-
-    // Send confirmation email
-    await this.emailService.sendConfirmationEmail(
-      user,
-      confirmationToken.rawToken,
-      confirmationToken.expiresAt,
-    );
-
+    const userResponse = ProfileResponseDto.fromDomain(user, avatarUrl);
     const accessToken = this.tokenService.generateAccessToken(user);
-    // Temporary deviceId (not persisted)
     const deviceId = randomUUID();
     const { rawToken } = await this.tokenService.createRefreshToken(
       user,
       deviceId,
-    );
-
-    const avatarUrl = user.avatarKey
-      ? await this.avatarStorageService.getAvatarUrl(user.avatarKey)
-      : null;
-
-    const userResponse: ProfileResponseDto = ProfileResponseDto.fromDomain(
-      user,
-      avatarUrl,
     );
 
     return {
@@ -68,15 +66,51 @@ export class AuthService {
       accessToken,
       refreshToken: rawToken,
       deviceId,
+      ...(warning ? { warning } : {}),
     };
   }
 
-  async signIn({ email, password }: LoginDto) {
+  async signUp(
+    dto: RegisterDto,
+    avatar?: Express.Multer.File,
+  ): Promise<AuthResult> {
+    const user = await this.profilesService.createUserProfile(dto, avatar);
+
+    if (!user) {
+      throw new InternalServerErrorException('User creation failed');
+    }
+
+    const confirmationToken =
+      await this.tokenService.createEmailConfirmationToken(user);
+
+    let warning: Warning | undefined;
+
+    // Send confirmation email
+    try {
+      await this.emailService.sendConfirmationEmail(
+        user,
+        confirmationToken.rawToken,
+        confirmationToken.expiresAt,
+      );
+    } catch (e) {
+      this.logger.warn(
+        `Confirmation email not sent for userId=${user.id}, email=${user.email}`,
+        JSON.stringify({ userId: user.id, email: user.email }),
+        e instanceof Error ? e.stack : undefined,
+      );
+
+      warning = this.warnings.create(WarningCode.EMAIL_NOT_SENT);
+    }
+
+    return this.issueAuthResult(user, warning);
+  }
+
+  async signIn({ email, password }: LoginDto): Promise<AuthResult> {
     const userOrm =
       await this.usersRepository.findByEmailWithPasswordHash(email);
 
     if (!userOrm) {
-      throw new UnauthorizedException(`User with email ${email} not found`);
+      throw new UnauthorizedException('Invalid credentials');
     }
 
     const isPasswordValid = await verifyPassword(
@@ -85,36 +119,15 @@ export class AuthService {
     );
 
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Incorrect password');
+      throw new UnauthorizedException('Invalid credentials');
     }
 
     const user = UserEntity.from(userOrm);
-    const avatarUrl = user.avatarKey
-      ? await this.avatarStorageService.getAvatarUrl(user.avatarKey)
-      : null;
 
-    const userResponse: ProfileResponseDto = ProfileResponseDto.fromDomain(
-      user,
-      avatarUrl,
-    );
-
-    const accessToken = this.tokenService.generateAccessToken(user);
-    // Temporary deviceId (not persisted)
-    const deviceId = randomUUID();
-    const { rawToken } = await this.tokenService.createRefreshToken(
-      user,
-      deviceId,
-    );
-
-    return {
-      user: userResponse,
-      accessToken,
-      refreshToken: rawToken,
-      deviceId,
-    };
+    return this.issueAuthResult(user);
   }
 
-  async logout(refreshToken: string, deviceId: string) {
+  async logout(refreshToken: string, deviceId: string): Promise<void> {
     try {
       const tokenRecord = await this.tokenService.validateRefreshToken(
         refreshToken,
@@ -127,28 +140,33 @@ export class AuthService {
     }
   }
 
-  async verifyEmail(token: string) {
+  async verifyEmail(token: string): Promise<UserEntity> {
     const tokenRecord =
       await this.tokenService.validateEmailConfirmationToken(token);
 
     await this.tokenService.revokeToken(tokenRecord.id);
 
-    if (tokenRecord.userId) {
-      const user = await this.profilesService.findById(tokenRecord.userId);
-
-      if (!user) {
-        throw new UnauthorizedException('User not found');
-      }
-
-      if (!user.isVerified) {
-        return this.profilesService.markEmailVerified(user.id);
-      }
-
-      return user;
+    if (!tokenRecord.userId) {
+      throw new UnauthorizedException('Invalid email confirmation token');
     }
+
+    const user = await this.profilesService.findById(tokenRecord.userId);
+
+    if (!user) {
+      throw new UnauthorizedException('Invalid email confirmation token');
+    }
+
+    if (!user.isVerified) {
+      return this.profilesService.markEmailVerified(user.id);
+    }
+
+    return user;
   }
 
-  async refresh(refreshToken: string, deviceId: string) {
+  async refresh(
+    refreshToken: string,
+    deviceId: string,
+  ): Promise<RefreshResult> {
     const tokenRecord = await this.tokenService.validateRefreshToken(
       refreshToken,
       deviceId,
@@ -158,44 +176,46 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    const user = await this.profilesService.findById(tokenRecord.userId!);
+    const user = await this.profilesService.findById(tokenRecord.userId);
 
     if (!user) {
-      throw new UnauthorizedException('User not found');
+      throw new UnauthorizedException('Invalid refresh token');
     }
 
     // Issue new tokens
     const accessToken = this.tokenService.generateAccessToken(user);
-    const { rawToken } = await this.tokenService.createRefreshToken(
-      user,
-      deviceId,
-    );
+    const { rawToken: newRefreshToken } =
+      await this.tokenService.createRefreshToken(user, deviceId);
 
     // Revoke old refresh token
     await this.tokenService.revokeToken(tokenRecord.id);
 
-    return { accessToken, refreshToken: rawToken };
+    return { accessToken, refreshToken: newRefreshToken };
   }
 
-  async getMe(userId: UserEntity['id']) {
+  async getMe(userId: UserEntity['id']): Promise<ProfileResponseDto> {
     const user = await this.profilesService.findById(userId);
 
     if (!user) {
-      throw new UnauthorizedException(`User with id ${userId} not found`);
+      throw new UnauthorizedException('Unauthorized');
     }
 
-    const avatarUrl = user.avatarKey
-      ? await this.avatarStorageService.getAvatarUrl(user.avatarKey)
-      : null;
+    let avatarUrl: string | null = null;
 
-    const userResponse: ProfileResponseDto = ProfileResponseDto.fromDomain(
-      user,
-      avatarUrl,
-    );
+    if (user.avatarKey) {
+      try {
+        avatarUrl = await this.avatarStorageService.getAvatarUrl(
+          user.avatarKey,
+        );
+      } catch (e) {
+        this.logger.warn(
+          `Avatar URL resolve failed`,
+          JSON.stringify({ userId: user.id, avatarKey: user.avatarKey }),
+          e instanceof Error ? e.stack : undefined,
+        );
+      }
+    }
 
-    const accessToken = this.tokenService.generateAccessToken(user);
-    const refreshToken = await this.tokenService.createRefreshToken(user);
-
-    return { user: userResponse, accessToken, refreshToken };
+    return ProfileResponseDto.fromDomain(user, avatarUrl);
   }
 }

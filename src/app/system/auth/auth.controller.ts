@@ -18,8 +18,6 @@ import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
-import { plainToInstance } from 'class-transformer';
-import { ProfileResponseDto } from '../../product/profiles/dto/profile-response.dto';
 import { CookieService } from '../cookies/cookie.service';
 import { SelfOnlyGuard } from './guards/self-only.guard';
 import { AuthResponseDto } from './dto/auth-response.dto';
@@ -27,7 +25,10 @@ import { apiRoutes } from '../../common/path-builder/api.routes';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import type { AuthenticatedRequest } from 'src/types/authenticated-request.types';
 import { CookieName } from '../cookies/cookies.types';
+import { ApiTags } from '@nestjs/swagger';
+import { ProfileResponseDto } from 'src/app/product/profiles/dto/profile-response.dto';
 
+@ApiTags('auth')
 @Controller()
 export class AuthController {
   constructor(
@@ -42,15 +43,17 @@ export class AuthController {
     @UploadedFile() avatar: Express.Multer.File | undefined,
     @Body() dto: RegisterDto,
     @Res({ passthrough: true }) res: Response,
-  ) {
-    const result = await this.authService.signUp(dto, avatar);
+  ): Promise<AuthResponseDto> {
+    const { user, accessToken, refreshToken, deviceId, warning } =
+      await this.authService.signUp(dto, avatar);
 
-    this.cookieService.setRefreshTokenCookie(res, result.refreshToken);
-    this.cookieService.setDeviceIdCookie(res, result.deviceId);
+    this.cookieService.setRefreshTokenCookie(res, refreshToken);
+    this.cookieService.setDeviceIdCookie(res, deviceId);
 
     return {
-      user: result.user,
-      accessToken: result.accessToken,
+      user,
+      accessToken,
+      ...(warning ? { warning } : {}),
     };
   }
 
@@ -59,17 +62,17 @@ export class AuthController {
   async login(
     @Body() dto: LoginDto,
     @Res({ passthrough: true }) res: Response,
-  ) {
-    const result = await this.authService.signIn(dto);
+  ): Promise<AuthResponseDto> {
+    const { user, accessToken, refreshToken, deviceId, warning } =
+      await this.authService.signIn(dto);
 
-    this.cookieService.setRefreshTokenCookie(res, result.refreshToken);
-    this.cookieService.setDeviceIdCookie(res, result.deviceId);
+    this.cookieService.setRefreshTokenCookie(res, refreshToken);
+    this.cookieService.setDeviceIdCookie(res, deviceId);
 
     return {
-      user: plainToInstance(ProfileResponseDto, result.user, {
-        excludeExtraneousValues: true,
-      }),
-      accessToken: result.accessToken,
+      user,
+      accessToken,
+      ...(warning ? { warning } : {}),
     };
   }
 
@@ -103,7 +106,7 @@ export class AuthController {
   }
 
   @Post(apiRoutes.AUTH.REFRESH)
-  @UseGuards(JwtAuthGuard, SelfOnlyGuard)
+  @UseGuards(SelfOnlyGuard)
   async refresh(
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
@@ -124,14 +127,11 @@ export class AuthController {
   }
 
   @Get(apiRoutes.AUTH.ME)
-  @UseGuards(JwtAuthGuard, SelfOnlyGuard)
-  async getMe(@Req() req: AuthenticatedRequest): Promise<AuthResponseDto> {
-    const userId = Number(req.user.id);
-    const result = await this.authService.getMe(userId);
+  @UseGuards(JwtAuthGuard)
+  async getMe(@Req() req: AuthenticatedRequest): Promise<ProfileResponseDto> {
+    const userId = req.user!.id;
+    const user = await this.authService.getMe(userId);
 
-    return {
-      user: result.user,
-      accessToken: result.accessToken,
-    };
+    return user;
   }
 }
