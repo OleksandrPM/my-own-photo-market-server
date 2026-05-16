@@ -20,7 +20,7 @@ export class EmailVerificationService {
     user: UserEntity,
     rawToken: string,
     expiresAt: Date,
-  ) {
+  ): Promise<void> {
     const verifyUrl = `${this.pathBuilderService.getApiFullPath(this.endpoint)}?token=${rawToken}`;
     const expiresInMinutes = calculateMinutesUntil(expiresAt);
 
