@@ -18,7 +18,6 @@ export class UserEntity {
   private constructor(private readonly props: UserProps) {}
 
   static from(props: UserProps): UserEntity {
-    // мінімальні інваріанти (можете розширити)
     if (!props.email) {
       throw new Error('User email is required');
     }

@@ -7,7 +7,6 @@ import { hashPassword } from 'src/app/common/utils';
 import { UsersRepository } from 'src/app/infrastructure/data/database/users/users.repository';
 import { UserOrmEntity } from 'src/app/infrastructure/data/database/users/user.orm-entity';
 import { CreateProfileDto } from './dto/create-profile.dto';
-import { ProfileResponseDto } from './dto/profile-response.dto';
 import { UserRole } from './user.types';
 import { UserEntity } from './entities/user.entity';
 import { AvatarStorageService } from 'src/app/infrastructure/storage/image-storage/avatar-storage.service';

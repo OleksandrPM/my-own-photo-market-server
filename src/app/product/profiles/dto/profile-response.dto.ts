@@ -1,4 +1,3 @@
-// src/modules/profiles/dto/profile-response.dto.ts
 import { Expose } from 'class-transformer';
 import { UserRole } from '../user.types';
 import { UserEntity } from '../entities/user.entity';

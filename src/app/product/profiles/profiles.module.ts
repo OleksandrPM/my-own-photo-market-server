@@ -3,11 +3,12 @@ import { ProfilesController } from './profiles.controller';
 import { ProfilesService } from './profiles.service';
 import { ImageStorageModule } from 'src/app/infrastructure/storage/image-storage/image-storage.module';
 import { UsersDataModule } from 'src/app/infrastructure/data/database/users/users-data.module';
+import { ProfilePresenter } from './profiles.presenter';
 
 @Module({
   imports: [UsersDataModule, ImageStorageModule],
   controllers: [ProfilesController],
-  providers: [ProfilesService],
-  exports: [ProfilesService],
+  providers: [ProfilesService, ProfilePresenter],
+  exports: [ProfilesService, ProfilePresenter],
 })
 export class ProfilesModule {}
