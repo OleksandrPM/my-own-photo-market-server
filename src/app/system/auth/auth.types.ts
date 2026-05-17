@@ -1,13 +1,9 @@
-import { ProfileResponseDto } from 'src/app/product/profiles/dto/profile-response.dto';
-import { Warning } from 'src/app/common/warning/warning.types';
+import { AuthResponseDto } from './dto/auth-response.dto';
 
 export type AuthResult = {
-  user: ProfileResponseDto;
-  accessToken: string;
+  response: AuthResponseDto;
   refreshToken: string;
   deviceId: string;
-
-  warning?: Warning;
 };
 
 export type RefreshResult = {

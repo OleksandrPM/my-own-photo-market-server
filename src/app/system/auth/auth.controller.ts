@@ -15,6 +15,14 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Request, Response } from 'express';
+import {
+  ApiBody,
+  ApiConsumes,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -25,8 +33,8 @@ import { apiRoutes } from '../../common/path-builder/api.routes';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import type { AuthenticatedRequest } from 'src/types/authenticated-request.types';
 import { CookieName } from '../cookies/cookies.types';
-import { ApiTags } from '@nestjs/swagger';
-import { ProfileResponseDto } from 'src/app/product/profiles/dto/profile-response.dto';
+import { VerifyEmailResponseDto } from './dto/verify-email-response.dto';
+import { MeResponseDto } from './dto/me-response.dto';
 
 @ApiTags('auth')
 @Controller()
@@ -37,48 +45,84 @@ export class AuthController {
   ) {}
 
   @Post(apiRoutes.AUTH.REGISTER)
-  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Register a new user' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        avatar: {
+          type: 'string',
+          format: 'binary',
+          description: 'User avatar image. Optional.',
+        },
+        email: { type: 'string', example: 'user@example.com' },
+        username: {
+          type: 'string',
+          nullable: true,
+          example: 'john_doe',
+          description: 'Optional. Can be null',
+        },
+        password: {
+          type: 'string',
+          example: 'StrongPass123!',
+          minLength: 8,
+          description: 'Must be strong password',
+        },
+      },
+      required: ['email', 'password'],
+    },
+  })
+  @ApiCreatedResponse({ type: AuthResponseDto })
   @UseInterceptors(FileInterceptor('avatar'))
   async register(
     @UploadedFile() avatar: Express.Multer.File | undefined,
     @Body() dto: RegisterDto,
     @Res({ passthrough: true }) res: Response,
   ): Promise<AuthResponseDto> {
-    const { user, accessToken, refreshToken, deviceId, warning } =
-      await this.authService.signUp(dto, avatar);
+    const { response, refreshToken, deviceId } = await this.authService.signUp(
+      dto,
+      avatar,
+    );
 
     this.cookieService.setRefreshTokenCookie(res, refreshToken);
     this.cookieService.setDeviceIdCookie(res, deviceId);
 
-    return {
-      user,
-      accessToken,
-      ...(warning ? { warning } : {}),
-    };
+    return response;
   }
 
   @Post(apiRoutes.AUTH.LOGIN)
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Login a user' })
+  @ApiBody({ type: LoginDto })
+  @ApiOkResponse({ type: AuthResponseDto })
   async login(
     @Body() dto: LoginDto,
     @Res({ passthrough: true }) res: Response,
   ): Promise<AuthResponseDto> {
-    const { user, accessToken, refreshToken, deviceId, warning } =
+    const { response, refreshToken, deviceId } =
       await this.authService.signIn(dto);
 
     this.cookieService.setRefreshTokenCookie(res, refreshToken);
     this.cookieService.setDeviceIdCookie(res, deviceId);
 
-    return {
-      user,
-      accessToken,
-      ...(warning ? { warning } : {}),
-    };
+    return response;
   }
 
   @Post(apiRoutes.AUTH.LOGOUT)
   @HttpCode(HttpStatus.OK)
-  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+  @ApiOperation({ summary: 'Logout a user' })
+  @ApiOkResponse({
+    schema: {
+      type: 'object',
+      properties: { success: { type: 'boolean' } },
+      example: { success: true },
+    },
+  })
+  async logout(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<{ isLoggedOut: boolean }> {
     const refreshToken = req.cookies?.[CookieName.REFRESH_TOKEN];
     const deviceId = req.cookies?.[CookieName.DEVICE_ID];
 
@@ -89,23 +133,34 @@ export class AuthController {
     this.cookieService.clearRefreshTokenCookie(res);
     this.cookieService.clearDeviceIdCookie(res);
 
-    return { success: true };
+    return { isLoggedOut: true };
   }
 
-  @Get(apiRoutes.AUTH.VERIFY_EMAIL)
-  async verifyEmail(@Req() req: Request) {
+  @Post(apiRoutes.AUTH.VERIFY_EMAIL)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Verify email address' })
+  @ApiOkResponse({ type: VerifyEmailResponseDto })
+  async verifyEmail(@Req() req: Request): Promise<VerifyEmailResponseDto> {
     const token = req.query.token;
 
     if (typeof token !== 'string') {
       throw new BadRequestException('Verification token is missing or invalid');
     }
 
-    const user = await this.authService.verifyEmail(token);
-
-    return { user };
+    return this.authService.verifyEmail(token);
   }
 
   @Post(apiRoutes.AUTH.REFRESH)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Refresh access token' })
+  @ApiOkResponse({
+    schema: {
+      type: 'object',
+      properties: {
+        accessToken: { type: 'string' },
+      },
+    },
+  })
   @UseGuards(SelfOnlyGuard)
   async refresh(
     @Req() req: Request,
@@ -127,8 +182,10 @@ export class AuthController {
   }
 
   @Get(apiRoutes.AUTH.ME)
+  @ApiOperation({ summary: 'Get current user profile' })
+  @ApiOkResponse({ type: MeResponseDto })
   @UseGuards(JwtAuthGuard)
-  async getMe(@Req() req: AuthenticatedRequest): Promise<ProfileResponseDto> {
+  async getMe(@Req() req: AuthenticatedRequest): Promise<MeResponseDto> {
     const userId = req.user!.id;
     const user = await this.authService.getMe(userId);
 

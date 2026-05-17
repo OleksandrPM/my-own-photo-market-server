@@ -12,11 +12,14 @@ import { TokenManagerService } from '../tokens/tokens-manager.service';
 import { ProfilesService } from 'src/app/product/profiles/profiles.service';
 import { UserEntity } from 'src/app/product/profiles/entities/user.entity';
 import { EmailManagerService } from '../communications/email/email-manager.service';
-import { ProfileResponseDto } from 'src/app/product/profiles/dto/profile-response.dto';
 import { AvatarStorageService } from 'src/app/infrastructure/storage/image-storage/avatar-storage.service';
 import { UsersRepository } from 'src/app/infrastructure/data/database/users/users.repository';
 import { AuthResult, RefreshResult } from './auth.types';
-import { Warning, WarningCode, warningService } from 'src/app/common/warning';
+import { WarningCode, warningService } from 'src/app/common/warning';
+import { ProfilePresenter } from 'src/app/product/profiles/profiles.presenter';
+import { WarningCollector } from 'src/app/common/warning/warning.collector';
+import { VerifyEmailResponseDto } from './dto/verify-email-response.dto';
+import { MeResponseDto } from './dto/me-response.dto';
 
 @Injectable()
 export class AuthService {
@@ -25,6 +28,7 @@ export class AuthService {
 
   constructor(
     private readonly profilesService: ProfilesService,
+    private readonly profilePresenter: ProfilePresenter,
     private readonly usersRepository: UsersRepository,
     private readonly tokenService: TokenManagerService,
     private readonly emailService: EmailManagerService,
@@ -33,27 +37,11 @@ export class AuthService {
 
   private async issueAuthResult(
     user: UserEntity,
-    warning?: Warning,
+    warningCollector: WarningCollector = new WarningCollector(),
   ): Promise<AuthResult> {
-    let avatarUrl: string | null = null;
+    const { dto: userProfile, warnings: userWarnings } =
+      await this.profilePresenter.toDtoWithWarnings(user);
 
-    if (user.avatarKey) {
-      try {
-        avatarUrl = await this.avatarStorageService.getAvatarUrl(
-          user.avatarKey,
-        );
-      } catch (e) {
-        this.logger.warn(
-          `Avatar URL resolve failed`,
-          JSON.stringify({ userId: user.id, avatarKey: user.avatarKey }),
-          e instanceof Error ? e.stack : undefined,
-        );
-
-        warning ??= this.warnings.create(WarningCode.AVATAR_URL_RESOLVE_FAILED);
-      }
-    }
-
-    const userResponse = ProfileResponseDto.fromDomain(user, avatarUrl);
     const accessToken = this.tokenService.generateAccessToken(user);
     const deviceId = randomUUID();
     const { rawToken } = await this.tokenService.createRefreshToken(
@@ -61,12 +49,20 @@ export class AuthService {
       deviceId,
     );
 
+    for (const warning of userWarnings ?? []) {
+      warningCollector.add(warning);
+    }
+
     return {
-      user: userResponse,
-      accessToken,
+      response: {
+        user: userProfile,
+        accessToken,
+        ...(warningCollector.hasAny()
+          ? { warnings: warningCollector.getAll() }
+          : {}),
+      },
       refreshToken: rawToken,
       deviceId,
-      ...(warning ? { warning } : {}),
     };
   }
 
@@ -74,6 +70,7 @@ export class AuthService {
     dto: RegisterDto,
     avatar?: Express.Multer.File,
   ): Promise<AuthResult> {
+    const warningCollector = new WarningCollector();
     const user = await this.profilesService.createUserProfile(dto, avatar);
 
     if (!user) {
@@ -82,8 +79,6 @@ export class AuthService {
 
     const confirmationToken =
       await this.tokenService.createEmailConfirmationToken(user);
-
-    let warning: Warning | undefined;
 
     // Send confirmation email
     try {
@@ -99,10 +94,10 @@ export class AuthService {
         e instanceof Error ? e.stack : undefined,
       );
 
-      warning = this.warnings.create(WarningCode.EMAIL_NOT_SENT);
+      warningCollector.add(this.warnings.create(WarningCode.EMAIL_NOT_SENT));
     }
 
-    return this.issueAuthResult(user, warning);
+    return this.issueAuthResult(user, warningCollector);
   }
 
   async signIn({ email, password }: LoginDto): Promise<AuthResult> {
@@ -140,7 +135,7 @@ export class AuthService {
     }
   }
 
-  async verifyEmail(token: string): Promise<UserEntity> {
+  async verifyEmail(token: string): Promise<VerifyEmailResponseDto> {
     const tokenRecord =
       await this.tokenService.validateEmailConfirmationToken(token);
 
@@ -157,10 +152,16 @@ export class AuthService {
     }
 
     if (!user.isVerified) {
-      return this.profilesService.markEmailVerified(user.id);
+      const updatedUser = await this.profilesService.markEmailVerified(user.id);
+      const { dto, warnings } =
+        await this.profilePresenter.toDtoWithWarnings(updatedUser);
+
+      return { user: dto, warnings };
     }
 
-    return user;
+    const { dto, warnings } =
+      await this.profilePresenter.toDtoWithWarnings(user);
+    return { user: dto, warnings };
   }
 
   async refresh(
@@ -193,29 +194,16 @@ export class AuthService {
     return { accessToken, refreshToken: newRefreshToken };
   }
 
-  async getMe(userId: UserEntity['id']): Promise<ProfileResponseDto> {
+  async getMe(userId: UserEntity['id']): Promise<MeResponseDto> {
     const user = await this.profilesService.findById(userId);
 
     if (!user) {
       throw new UnauthorizedException('Unauthorized');
     }
 
-    let avatarUrl: string | null = null;
+    const { dto, warnings } =
+      await this.profilePresenter.toDtoWithWarnings(user);
 
-    if (user.avatarKey) {
-      try {
-        avatarUrl = await this.avatarStorageService.getAvatarUrl(
-          user.avatarKey,
-        );
-      } catch (e) {
-        this.logger.warn(
-          `Avatar URL resolve failed`,
-          JSON.stringify({ userId: user.id, avatarKey: user.avatarKey }),
-          e instanceof Error ? e.stack : undefined,
-        );
-      }
-    }
-
-    return ProfileResponseDto.fromDomain(user, avatarUrl);
+    return { user: dto, warnings };
   }
 }
