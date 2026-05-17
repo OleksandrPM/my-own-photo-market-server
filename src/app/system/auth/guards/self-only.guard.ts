@@ -11,10 +11,13 @@ export class SelfOnlyGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const req = context.switchToHttp().getRequest<AuthenticatedRequest>();
 
-    // req.user is now fully typed because of your augmentation
+    // Check if the user is authenticated
+    if (!req.user) {
+      throw new ForbiddenException('Authentication required');
+    }
+
     const userId = req.user.id;
 
-    // You can decide where the target ID comes from:
     const targetId = req.params.id ?? req.body.id ?? req.query.id;
 
     if (!targetId) {
