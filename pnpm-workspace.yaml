@@ -1,2 +1,8 @@
+allowBuilds:
+  '@nestjs/core': true
+  '@scarf/scarf': true
+  argon2: true
+  sharp: true
+  unrs-resolver: true
 ignoredBuiltDependencies:
   - '@nestjs/core'
