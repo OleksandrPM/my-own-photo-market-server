@@ -14,14 +14,12 @@ export class EmailVerificationService {
     private readonly emailService: EmailService,
   ) {}
 
-  private readonly endpoint = `${apiRoutes.AUTH.BASE}/${apiRoutes.AUTH.VERIFY_EMAIL}`;
-
   async sendConfirmationEmail(
     user: UserEntity,
     rawToken: string,
     expiresAt: Date,
   ): Promise<void> {
-    const verifyUrl = `${this.pathBuilderService.getApiFullPath(this.endpoint)}?token=${rawToken}`;
+    const verifyUrl = `${this.pathBuilderService.getApiFullPath(apiRoutes.AUTH.BASE, apiRoutes.AUTH.VERIFY_EMAIL)}?token=${rawToken}`;
     const expiresInMinutes = calculateMinutesUntil(expiresAt);
 
     const html = buildEmailVerificationTemplate(

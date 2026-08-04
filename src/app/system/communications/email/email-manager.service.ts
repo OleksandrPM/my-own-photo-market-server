@@ -13,12 +13,12 @@ export class EmailManagerService {
   // Setup related email methods
   async sendSetupConfirmationEmail(
     email: string,
-    rawToken: string,
+    encodedToken: string,
     expiresAt: Date,
   ) {
     await this.emailSetupService.sendSetupConfirmationEmail(
       email,
-      rawToken,
+      encodedToken,
       expiresAt,
     );
   }
