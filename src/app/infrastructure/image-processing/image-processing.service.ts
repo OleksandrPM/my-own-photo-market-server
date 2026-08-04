@@ -1,12 +1,17 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import sharp from 'sharp';
-import { IMAGE_PRESETS, ImagePreset } from './image-preset.interface';
+import {
+  IMAGE_PRESETS,
+  ImagePreset,
+  ImagePresetName,
+} from './image-preset.interface';
+import { ERROR_CODES } from 'src/types/error.types';
 
 @Injectable()
 export class ImageProcessingService {
   async process(
     buffer: Buffer,
-    presetOrConfig: string | ImagePreset,
+    presetOrConfig: ImagePresetName | ImagePreset,
   ): Promise<Buffer> {
     const config =
       typeof presetOrConfig === 'string'
@@ -14,14 +19,20 @@ export class ImageProcessingService {
         : presetOrConfig;
 
     if (!config) {
-      throw new Error(`Unknown image preset: ${presetOrConfig}`);
+      throw new BadRequestException({
+        code: ERROR_CODES.BAD_REQUEST,
+        message: 'Unknown image preset',
+      });
     }
 
     let pipeline = sharp(buffer);
 
     // Resize
     if (config.width) {
-      pipeline = pipeline.resize({ width: config.width });
+      pipeline = pipeline.resize({
+        width: config.width,
+        fit: 'inside',
+      });
     }
 
     // Format
@@ -31,6 +42,8 @@ export class ImageProcessingService {
 
     // Text watermark
     if (config.watermarkText) {
+      const safeText = config.watermarkText.text.replace(/[<>&'"]/g, '');
+
       const svg = `
         <svg width="100%" height="100%">
           <text x="95%" y="95%"
@@ -39,7 +52,7 @@ export class ImageProcessingService {
                 opacity="${config.watermarkText.opacity ?? 0.5}"
                 text-anchor="end"
                 font-family="Arial, sans-serif">
-            ${config.watermarkText.text}
+            ${safeText}
           </text>
         </svg>
       `;

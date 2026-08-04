@@ -46,3 +46,5 @@ export const IMAGE_PRESETS: Record<string, ImagePreset> = {
     },
   },
 };
+
+export type ImagePresetName = keyof typeof IMAGE_PRESETS;
