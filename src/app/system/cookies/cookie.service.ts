@@ -10,6 +10,7 @@ export class CookieService {
   readonly refreshPath = `/${apiRoutes.AUTH.BASE}/${apiRoutes.AUTH.REFRESH}`;
   private readonly isLocalhost: boolean;
   private readonly originHostname: string;
+  private readonly isHttps: boolean;
 
   constructor(private readonly config: ConfigService) {
     const origin = this.config.get<string>('ORIGIN_URL');
@@ -20,17 +21,14 @@ export class CookieService {
 
     this.originHostname = new URL(origin).hostname;
     this.isLocalhost = this.originHostname === 'localhost';
+    this.isHttps = origin.startsWith('https://');
   }
 
   private getCookieBaseOptions(): Partial<CookieOptions> {
-    const isHttps = this.config
-      .get<string>('ORIGIN_URL')
-      ?.startsWith('https://');
-
     if (this.isLocalhost) {
       return {
-        secure: isHttps,
-        sameSite: isHttps ? 'none' : 'lax',
+        secure: this.isHttps,
+        sameSite: this.isHttps ? 'none' : 'lax',
         domain: undefined,
       };
     }
@@ -38,11 +36,11 @@ export class CookieService {
     return {
       secure: true,
       sameSite: 'none',
-      domain: `.${this.originHostname}`,
+      domain: undefined, // Let the browser set the domain to the request's origin
     };
   }
 
-  setCookie(
+  private setCookie(
     res: Response,
     name: CookieName,
     value: string,
@@ -60,15 +58,31 @@ export class CookieService {
     });
   }
 
-  clearCookie(res: Response, name: CookieName, path = '/') {
+  private clearCookie(res: Response, name: CookieName, path = '/') {
     const base = this.getCookieBaseOptions();
 
     res.clearCookie(name, {
       path,
       domain: base.domain,
+      secure: base.secure,
+      sameSite: base.sameSite,
     });
   }
 
+  // CSRF token cookie methods
+  setCsrfCookie(res: Response, csrfToken: string) {
+    this.setCookie(res, CookieName.CSRF_TOKEN, csrfToken, {
+      httpOnly: false,
+      path: '/',
+      maxAge: COOKIES_TTL[CookieName.CSRF_TOKEN],
+    });
+  }
+
+  clearCsrfCookie(res: Response) {
+    this.clearCookie(res, CookieName.CSRF_TOKEN);
+  }
+
+  // Refresh token cookie methods
   setRefreshTokenCookie(res: Response, token: string) {
     this.setCookie(res, CookieName.REFRESH_TOKEN, token, {
       httpOnly: true,
@@ -81,9 +95,10 @@ export class CookieService {
     this.clearCookie(res, CookieName.REFRESH_TOKEN, this.refreshPath);
   }
 
+  // Device ID cookie methods
   setDeviceIdCookie(res: Response, deviceId: string) {
     this.setCookie(res, CookieName.DEVICE_ID, deviceId, {
-      httpOnly: false,
+      httpOnly: true,
       path: '/',
       maxAge: COOKIES_TTL[CookieName.DEVICE_ID],
     });
@@ -91,5 +106,22 @@ export class CookieService {
 
   clearDeviceIdCookie(res: Response) {
     this.clearCookie(res, CookieName.DEVICE_ID, '/');
+  }
+
+  // Setup session cookie methods
+  setSetupSessionCookie(res: Response, sessionId: string) {
+    this.setCookie(res, CookieName.SETUP_SESSION_ID, sessionId, {
+      httpOnly: true,
+      path: `/${apiRoutes.SETUP.BASE}`,
+      maxAge: COOKIES_TTL[CookieName.SETUP_SESSION_ID],
+    });
+  }
+
+  clearSetupSessionCookie(res: Response) {
+    this.clearCookie(
+      res,
+      CookieName.SETUP_SESSION_ID,
+      `/${apiRoutes.SETUP.BASE}`,
+    );
   }
 }
