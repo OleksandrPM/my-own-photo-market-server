@@ -5,7 +5,9 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  ParseIntPipe,
   Post,
+  Query,
   Req,
   Res,
   UnauthorizedException,
@@ -35,6 +37,8 @@ import type { AuthenticatedRequest } from 'src/types/authenticated-request.types
 import { CookieName } from '../cookies/cookies.types';
 import { VerifyEmailResponseDto } from './dto/verify-email-response.dto';
 import { MeResponseDto } from './dto/me-response.dto';
+import { LogoutDto } from './dto/logout.dto';
+import { decodeToken } from '../tokens/tokens.utils';
 
 @ApiTags('auth')
 @Controller()
@@ -120,34 +124,39 @@ export class AuthController {
     },
   })
   async logout(
+    @Body() dto: LogoutDto,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ): Promise<{ isLoggedOut: boolean }> {
+    const { userId } = dto;
     const refreshToken = req.cookies?.[CookieName.REFRESH_TOKEN];
     const deviceId = req.cookies?.[CookieName.DEVICE_ID];
+    const sessionId = req.cookies?.[CookieName.SETUP_SESSION_ID];
 
     if (refreshToken && deviceId) {
-      await this.authService.logout(refreshToken, deviceId);
+      await this.authService.logout(userId, refreshToken, deviceId, sessionId);
     }
 
+    // clear cookies regardless of whether logout in service succeeded, to ensure client state is cleared
     this.cookieService.clearRefreshTokenCookie(res);
     this.cookieService.clearDeviceIdCookie(res);
+    this.cookieService.clearCsrfCookie(res);
 
     return { isLoggedOut: true };
   }
 
-  @Post(apiRoutes.AUTH.VERIFY_EMAIL)
+  @Get(apiRoutes.AUTH.VERIFY_EMAIL)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Verify email address' })
   @ApiOkResponse({ type: VerifyEmailResponseDto })
-  async verifyEmail(@Req() req: Request): Promise<VerifyEmailResponseDto> {
-    const token = req.query.token;
+  async verifyEmail(
+    @Query('token') encodedToken: string,
+  ): Promise<VerifyEmailResponseDto> {
+    const { tokenId, rawToken } = decodeToken(encodedToken);
 
-    if (typeof token !== 'string') {
-      throw new BadRequestException('Verification token is missing or invalid');
-    }
+    const response = await this.authService.verifyEmail(tokenId, rawToken);
 
-    return this.authService.verifyEmail(token);
+    return response;
   }
 
   @Post(apiRoutes.AUTH.REFRESH)
@@ -173,8 +182,9 @@ export class AuthController {
       throw new UnauthorizedException('Refresh token or device ID missing');
     }
 
+    const sessionId = req.cookies?.[CookieName.SETUP_SESSION_ID];
     const { accessToken, refreshToken: newRefreshToken } =
-      await this.authService.refresh(refreshToken, deviceId);
+      await this.authService.refresh(refreshToken, deviceId, sessionId);
 
     this.cookieService.setRefreshTokenCookie(res, newRefreshToken);
 

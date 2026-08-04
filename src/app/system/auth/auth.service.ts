@@ -20,6 +20,7 @@ import { ProfilePresenter } from 'src/app/product/profiles/profiles.presenter';
 import { WarningCollector } from 'src/app/common/warning/warning.collector';
 import { VerifyEmailResponseDto } from './dto/verify-email-response.dto';
 import { MeResponseDto } from './dto/me-response.dto';
+import { decodeToken } from '../tokens/tokens.utils';
 
 @Injectable()
 export class AuthService {
@@ -44,9 +45,11 @@ export class AuthService {
 
     const accessToken = this.tokenService.generateAccessToken(user);
     const deviceId = randomUUID();
+    const sessionId = randomUUID();
     const { rawToken } = await this.tokenService.createRefreshToken(
       user,
       deviceId,
+      sessionId,
     );
 
     for (const warning of userWarnings ?? []) {
@@ -63,8 +66,13 @@ export class AuthService {
       },
       refreshToken: rawToken,
       deviceId,
+      sessionId,
     };
   }
+
+  // getCsrfToken(): string {
+  //   return this.tokenService.generateCsrfToken();
+  // }
 
   async signUp(
     dto: RegisterDto,
@@ -122,55 +130,86 @@ export class AuthService {
     return this.issueAuthResult(user);
   }
 
-  async logout(refreshToken: string, deviceId: string): Promise<void> {
+  async logout(
+    userId: number,
+    encodedRefreshToken: string,
+    deviceId: string,
+    sessionId: string,
+  ): Promise<void> {
+    const user = await this.profilesService.findById(userId);
+
+    if (!user) {
+      return;
+    }
+
+    const { tokenId, rawToken } = decodeToken(encodedRefreshToken);
+
     try {
       const tokenRecord = await this.tokenService.validateRefreshToken(
-        refreshToken,
+        tokenId,
+        rawToken,
         deviceId,
+        sessionId,
       );
 
-      await this.tokenService.revokeToken(tokenRecord.id);
+      await this.tokenService.revokeTokenById(tokenRecord.id);
     } catch {
       // ignore — logout must always succeed
     }
   }
 
-  async verifyEmail(token: string): Promise<VerifyEmailResponseDto> {
-    const tokenRecord =
-      await this.tokenService.validateEmailConfirmationToken(token);
-
-    await this.tokenService.revokeToken(tokenRecord.id);
+  async verifyEmail(
+    tokenId: number,
+    token: string,
+  ): Promise<VerifyEmailResponseDto> {
+    const tokenRecord = await this.tokenService.validateEmailConfirmationToken(
+      tokenId,
+      token,
+    );
 
     if (!tokenRecord.userId) {
-      throw new UnauthorizedException('Invalid email confirmation token');
+      throw new UnauthorizedException('Invalid token');
     }
 
     const user = await this.profilesService.findById(tokenRecord.userId);
 
     if (!user) {
-      throw new UnauthorizedException('Invalid email confirmation token');
+      throw new UnauthorizedException('User not found');
     }
 
-    if (!user.isVerified) {
-      const updatedUser = await this.profilesService.markEmailVerified(user.id);
+    // already verified → idempotent return
+    if (user.isVerified) {
+      await this.tokenService.revokeTokenById(tokenRecord.id).catch(() => {});
       const { dto, warnings } =
-        await this.profilePresenter.toDtoWithWarnings(updatedUser);
+        await this.profilePresenter.toDtoWithWarnings(user);
 
       return { user: dto, warnings };
     }
 
+    // verify email and update profile
+    const updatedUser = await this.profilesService.markEmailVerified(user.id);
+
+    // revoke token after successful verification
+    await this.tokenService.revokeTokenById(tokenRecord.id);
+
     const { dto, warnings } =
-      await this.profilePresenter.toDtoWithWarnings(user);
+      await this.profilePresenter.toDtoWithWarnings(updatedUser);
+
     return { user: dto, warnings };
   }
 
   async refresh(
-    refreshToken: string,
+    encodedRefreshToken: string,
     deviceId: string,
+    sessionId: string,
   ): Promise<RefreshResult> {
+    const { tokenId, rawToken } = decodeToken(encodedRefreshToken);
+
     const tokenRecord = await this.tokenService.validateRefreshToken(
-      refreshToken,
+      tokenId,
+      rawToken,
       deviceId,
+      sessionId,
     );
 
     if (!tokenRecord.userId) {
@@ -186,10 +225,10 @@ export class AuthService {
     // Issue new tokens
     const accessToken = this.tokenService.generateAccessToken(user);
     const { rawToken: newRefreshToken } =
-      await this.tokenService.createRefreshToken(user, deviceId);
+      await this.tokenService.createRefreshToken(user, deviceId, sessionId);
 
     // Revoke old refresh token
-    await this.tokenService.revokeToken(tokenRecord.id);
+    await this.tokenService.revokeTokenById(tokenRecord.id);
 
     return { accessToken, refreshToken: newRefreshToken };
   }
