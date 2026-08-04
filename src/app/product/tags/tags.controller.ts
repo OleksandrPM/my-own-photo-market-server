@@ -8,6 +8,7 @@ import {
   Delete,
   NotFoundException,
   ParseIntPipe,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -42,8 +43,13 @@ export class TagsController {
   @ApiOperation({ summary: 'Get all tags in the short UI format' })
   @ApiOkResponse({ type: TagUiResponseDto, isArray: true })
   async findAllTagsUi(): Promise<TagUiResponseDto[]> {
-    const result = await this.tagsService.findAll();
-    return result.map((tag) => tag.toUi());
+    try {
+      const result = await this.tagsService.findAll();
+      return result.map((tag) => tag.toUi());
+    } catch (error) {
+      console.error('Error fetching tags:', error);
+      throw new InternalServerErrorException('Failed to fetch tags');
+    }
   }
 
   @Get(apiRoutes.TAGS.NAME)
