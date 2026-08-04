@@ -5,6 +5,8 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Request } from 'express';
+import { ERROR_CODES } from 'src/types/error.types';
 
 @Injectable()
 export class OriginGuard implements CanActivate {
@@ -18,14 +20,37 @@ export class OriginGuard implements CanActivate {
   }
 
   canActivate(context: ExecutionContext): boolean {
-    const request = context.switchToHttp().getRequest();
-    const origin = request.headers.origin;
-    const referer = request.headers.referer;
+    const request = context.switchToHttp().getRequest<Request>();
 
-    if (origin && this.allowedOrigins.includes(origin)) return true;
-    if (referer && this.allowedOrigins.some((a) => referer.startsWith(a)))
+    if (['GET', 'HEAD', 'OPTIONS'].includes(request.method)) {
       return true;
+    }
 
-    throw new ForbiddenException('Access denied');
+    const origin = request.get('origin');
+    const referer = request.get('referer');
+
+    const isAllowedOrigin = origin
+      ? this.allowedOrigins.includes(origin)
+      : false;
+
+    let isAllowedReferer = false;
+
+    if (referer) {
+      try {
+        const refererOrigin = new URL(referer).origin;
+        isAllowedReferer = this.allowedOrigins.includes(refererOrigin);
+      } catch {
+        isAllowedReferer = false;
+      }
+    }
+
+    if (isAllowedOrigin || isAllowedReferer) {
+      return true;
+    }
+
+    throw new ForbiddenException({
+      code: ERROR_CODES.FORBIDDEN,
+      message: 'Access denied',
+    });
   }
 }

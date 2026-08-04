@@ -10,6 +10,7 @@ import { CookieService } from 'src/app/system/cookies/cookie.service';
 import { TokenManagerService } from 'src/app/system/tokens/tokens-manager.service';
 import { CookieName } from 'src/app/system/cookies/cookies.types';
 import { ERROR_CODES } from 'src/types/error.types';
+import { SKIP_CSRF_KEY } from '../decorators/skip-csrf.decorator';
 
 @Injectable()
 export class CsrfGuard implements CanActivate {
@@ -35,7 +36,7 @@ export class CsrfGuard implements CanActivate {
     const res = ctx.getResponse<Response>();
 
     // Skip CSRF check if @SkipCsrf() is present
-    const skip = this.reflector.getAllAndOverride<boolean>('skipCsrf', [
+    const skip = this.reflector.getAllAndOverride<boolean>(SKIP_CSRF_KEY, [
       context.getHandler(),
       context.getClass(),
     ]);
