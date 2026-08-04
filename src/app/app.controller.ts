@@ -1,26 +1,17 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Render } from '@nestjs/common';
 import { PathBuilderService } from './common/path-builder/path-builder.service';
-import { ApiOkResponse, ApiOperation } from '@nestjs/swagger';
+import { apiRoutes } from './common/path-builder/api.routes';
 
 @Controller()
 export class AppController {
   constructor(private readonly pathBuilder: PathBuilderService) {}
 
   @Get()
-  @ApiOperation({ summary: 'App root endpoint' })
-  @ApiOkResponse({
-    description: 'Welcome message with API endpoint',
-    example: {
-      status: 'ok',
-      message: 'Welcome to the my-own-photo-market backend',
-      api: 'path/to/api',
-    },
-  })
+  @Render('index')
   root() {
     return {
-      status: 'ok',
-      message: 'Welcome to the my-own-photo-market backend',
-      api: this.pathBuilder.getApiRootPath(),
+      apiRootPath: this.pathBuilder.getApiRootPath(),
+      swaggerPath: this.pathBuilder.getApiPath(apiRoutes.DOCS.BASE),
     };
   }
 }
