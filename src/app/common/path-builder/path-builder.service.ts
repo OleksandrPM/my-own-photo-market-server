@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { ApiRoutePart } from './path-builder.types';
 
 @Injectable()
 export class PathBuilderService {
@@ -16,11 +17,11 @@ export class PathBuilderService {
     return `/${apiPrefix}/${apiVersion}`;
   }
 
-  getApiPath(path: string) {
-    return `${this.getApiRootPath()}/${path}`;
+  getApiPath(...parts: ApiRoutePart[]) {
+    return [this.getApiRootPath(), ...parts].join('/');
   }
 
-  getApiFullPath(path: string) {
-    return `${this.getRootPath()}${this.getApiPath(path)}`;
+  getApiFullPath(...parts: ApiRoutePart[]) {
+    return `${this.getRootPath()}${this.getApiPath(...parts)}`;
   }
 }
