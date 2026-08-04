@@ -7,11 +7,16 @@ import { UserEntity } from '../../product/profiles/entities/user.entity';
 import { SetupTokenService } from './handlers/setup-token.service';
 import { PasswordResetTokenService } from './handlers/password-reset-token.service';
 import { TwoFactorAuthTokenService } from './handlers/two-factor-token.service';
+import { AccessTokenService } from './handlers/access-token.service';
+import { CsrfTokenService } from './handlers/csrf-token.service';
+import { UserTokenType } from './tokens.types';
 
 @Injectable()
 export class TokenManagerService {
   constructor(
     private readonly tokenService: TokenService,
+    private readonly csrfTokenService: CsrfTokenService,
+    private readonly accessTokenService: AccessTokenService,
     private readonly setupTokenService: SetupTokenService,
     private readonly refreshTokenService: RefreshTokenService,
     private readonly emailConfirmTokenService: EmailConfirmTokenService,
@@ -21,12 +26,26 @@ export class TokenManagerService {
   ) {}
 
   // Common token management methods
-  async revokeToken(id: number) {
-    return this.tokenService.revokeToken(id);
+  async revokeTokenById(id: number) {
+    return this.tokenService.revokeTokenById(id);
   }
 
+  async revokeTokensByType(tokenType: UserTokenType, date = new Date()) {
+    return this.tokenService.revokeTokensByType(tokenType, date);
+  }
+
+  // CSRF token methods
+  generateCsrfToken(bindingValue: string): string {
+    return this.csrfTokenService.generateCsrfToken(bindingValue);
+  }
+
+  validateCsrfToken(token: string, bindingValue: string): boolean {
+    return this.csrfTokenService.validateCsrfToken(token, bindingValue);
+  }
+
+  // Access token methods
   generateAccessToken(user: UserEntity): string {
-    return this.tokenService.generateAccessToken(user);
+    return this.accessTokenService.generateAccessToken(user);
   }
 
   // Setup token methods
@@ -34,25 +53,51 @@ export class TokenManagerService {
     return this.setupTokenService.createSetupToken(ownerEmail, deviceId);
   }
 
-  async validateSetupToken(token: string) {
-    return this.setupTokenService.validateSetupToken(token);
+  async getSetupTokenBySessionId(sessionId: string) {
+    return this.setupTokenService.getSetupTokenBySessionId(sessionId);
+  }
+
+  async validateSetupToken(tokenId: number, token: string, sessionId: string) {
+    return this.setupTokenService.validateSetupToken(tokenId, token, sessionId);
+  }
+
+  async validateSetupTokenFromEmail(tokenId: number, token: string) {
+    return this.setupTokenService.validateSetupTokenFromEmail(tokenId, token);
   }
 
   async confirmOwnerEmail(tokenId: number) {
     return this.setupTokenService.confirmOwnerEmail(tokenId);
   }
 
-  async isOwnerEmailConfirmed(email: string, deviceId: string) {
-    return this.setupTokenService.isOwnerEmailConfirmed(email, deviceId);
+  async isOwnerEmailConfirmed(sessionId: string) {
+    return this.setupTokenService.isOwnerEmailConfirmed(sessionId);
   }
 
   // Refresh token methods
-  async createRefreshToken(user: UserEntity, deviceId?: string) {
-    return this.refreshTokenService.createRefreshToken(user, deviceId);
+  async createRefreshToken(
+    user: UserEntity,
+    deviceId: string,
+    sessionId: string,
+  ) {
+    return this.refreshTokenService.createRefreshToken(
+      user,
+      deviceId,
+      sessionId,
+    );
   }
 
-  async validateRefreshToken(token: string, deviceId: string) {
-    return this.refreshTokenService.validateRefreshToken(token, deviceId);
+  async validateRefreshToken(
+    tokenId: number,
+    token: string,
+    deviceId: string,
+    sessionId: string,
+  ) {
+    return this.refreshTokenService.validateRefreshToken(
+      tokenId,
+      token,
+      deviceId,
+      sessionId,
+    );
   }
 
   // Email confirmation token methods
@@ -60,8 +105,11 @@ export class TokenManagerService {
     return this.emailConfirmTokenService.createEmailConfirmationToken(user);
   }
 
-  async validateEmailConfirmationToken(token: string) {
-    return this.emailConfirmTokenService.validateEmailConfirmationToken(token);
+  async validateEmailConfirmationToken(tokenId: number, token: string) {
+    return this.emailConfirmTokenService.validateEmailConfirmationToken(
+      tokenId,
+      token,
+    );
   }
 
   // Email change token methods
@@ -69,25 +117,35 @@ export class TokenManagerService {
     return this.emailChangeTokenService.createEmailChangeToken(user, newEmail);
   }
 
-  async validateEmailChangeToken(token: string) {
-    return this.emailChangeTokenService.validateEmailChangeToken(token);
+  async validateEmailChangeToken(tokenId: number, token: string) {
+    return this.emailChangeTokenService.validateEmailChangeToken(
+      tokenId,
+      token,
+    );
   }
 
   // Password reset token methods
-  async createPasswordResetToken(user: UserEntity) {
-    return this.passwordResetTokenService.createPasswordResetToken(user);
+  async createPasswordResetToken(user: UserEntity, email: string) {
+    return this.passwordResetTokenService.createPasswordResetToken(user, email);
   }
 
-  async validatePasswordResetToken(token: string) {
-    return this.passwordResetTokenService.validatePasswordResetToken(token);
+  async validatePasswordResetToken(tokenId: number, token: string) {
+    return this.passwordResetTokenService.validatePasswordResetToken(
+      tokenId,
+      token,
+    );
   }
 
   // Two-factor auth token methods
-  async createTwoFaToken(user: UserEntity) {
-    return this.twoFactorAuthTokenService.createTwoFaToken(user);
+  async createTwoFaToken(user: UserEntity, sessionId: string) {
+    return this.twoFactorAuthTokenService.createTwoFaToken(user, sessionId);
   }
 
-  async validateTwoFaToken(token: string) {
-    return this.twoFactorAuthTokenService.validateTwoFaToken(token);
+  async validateTwoFaToken(tokenId: number, token: string, sessionId: string) {
+    return this.twoFactorAuthTokenService.validateTwoFaToken(
+      tokenId,
+      token,
+      sessionId,
+    );
   }
 }

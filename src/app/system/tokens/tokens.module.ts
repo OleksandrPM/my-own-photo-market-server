@@ -10,6 +10,8 @@ import { EmailChangeTokenService } from './handlers/email-change-token.service';
 import { TwoFactorAuthTokenService } from './handlers/two-factor-token.service';
 import { TokenManagerService } from './tokens-manager.service';
 import { UserTokensDataModule } from 'src/app/infrastructure/data/database/user-tokens/user-tokens-data.module';
+import { AccessTokenService } from './handlers/access-token.service';
+import { CsrfTokenService } from './handlers/csrf-token.service';
 
 @Module({
   imports: [
@@ -26,6 +28,8 @@ import { UserTokensDataModule } from 'src/app/infrastructure/data/database/user-
   providers: [
     TokenService,
     TokenManagerService,
+    CsrfTokenService,
+    AccessTokenService,
     SetupTokenService,
     RefreshTokenService,
     EmailConfirmTokenService,

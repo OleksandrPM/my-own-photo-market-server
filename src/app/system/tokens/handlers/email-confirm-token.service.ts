@@ -14,9 +14,10 @@ export class EmailConfirmTokenService {
     });
   }
 
-  async validateEmailConfirmationToken(token: string) {
+  async validateEmailConfirmationToken(tokenId: number, token: string) {
     return this.tokenService.validateToken({
       type: UserTokenType.EMAIL_CONFIRMATION,
+      tokenId,
       token,
     });
   }

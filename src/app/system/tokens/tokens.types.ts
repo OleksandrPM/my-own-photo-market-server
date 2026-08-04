@@ -1,5 +1,6 @@
-import { UserToken } from './entities/user-token.entity';
-import { TokenPayloadInputs, TokenPayloads } from './tokens.payload';
+import { UserTokenOrmEntity } from 'src/app/infrastructure/data/database/user-tokens/user-token.orm-entity';
+import { UserEntity } from 'src/app/product/profiles/entities/user.entity';
+import { TokenPayloads } from './tokens.payload';
 
 export enum UserTokenType {
   INITIAL_SETUP = 'initial_setup',
@@ -11,7 +12,7 @@ export enum UserTokenType {
 }
 
 export type TypedUserToken<T extends UserTokenType> = Omit<
-  UserToken,
+  UserTokenOrmEntity,
   'payload' | 'type'
 > & {
   type: T;
@@ -21,6 +22,15 @@ export type TypedUserToken<T extends UserTokenType> = Omit<
 export type AnyTypedUserToken = {
   [K in UserTokenType]: TypedUserToken<K>;
 }[UserTokenType];
+
+export const asTypedToken = <T extends UserTokenType>(
+  token: UserTokenOrmEntity | null,
+  type: T,
+): TypedUserToken<T> | null => {
+  if (!token) return null;
+  if (token.type !== type) return null;
+  return token as unknown as TypedUserToken<T>;
+};
 
 export enum UniquenessType {
   SINGLE = 'single',
@@ -34,28 +44,88 @@ export const TOKEN_UNIQUENESS: Record<UserTokenType, UniquenessType> = {
   [UserTokenType.EMAIL_CHANGE]: UniquenessType.SINGLE,
   [UserTokenType.PASSWORD_RESET]: UniquenessType.SINGLE,
   [UserTokenType.TWO_FA]: UniquenessType.SINGLE,
-
   [UserTokenType.REFRESH]: UniquenessType.PER_DEVICE,
 };
 
-// Args types for createToken
-export type ExtraArg<T extends UserTokenType> =
-  TokenPayloadInputs[T]['extra'] extends null
-    ? { extra?: null } // можна не передавати
-    : { extra: TokenPayloadInputs[T]['extra'] }; // обов’язково
+export type CreateArgsMap = {
+  [UserTokenType.INITIAL_SETUP]: {
+    type: UserTokenType.INITIAL_SETUP;
+    user: null;
+    sessionId: string;
+    ownerEmail: string;
+  };
+  [UserTokenType.EMAIL_CONFIRMATION]: {
+    type: UserTokenType.EMAIL_CONFIRMATION;
+    user: UserEntity;
+  };
+  [UserTokenType.EMAIL_CHANGE]: {
+    type: UserTokenType.EMAIL_CHANGE;
+    user: UserEntity;
+    newEmail: string;
+  };
+  [UserTokenType.PASSWORD_RESET]: {
+    type: UserTokenType.PASSWORD_RESET;
+    user: UserEntity | null;
+    email: string;
+  };
+  [UserTokenType.REFRESH]: {
+    type: UserTokenType.REFRESH;
+    user: UserEntity;
+    deviceId: string;
+    sessionId: string;
+  };
+  [UserTokenType.TWO_FA]: {
+    type: UserTokenType.TWO_FA;
+    user: UserEntity;
+    sessionId: string;
+  };
+};
 
-export type UserArg<T extends UserTokenType> =
-  TokenPayloadInputs[T]['user'] extends null
-    ? { user: null }
-    : { user: TokenPayloadInputs[T]['user'] };
+export type CreateTokenArgs<T extends UserTokenType> = CreateArgsMap[T];
 
-export type DeviceArg<T extends UserTokenType> =
-  (typeof TOKEN_UNIQUENESS)[T] extends UniquenessType.PER_DEVICE
-    ? { deviceId: string } // обов’язково
-    : { deviceId?: string };
+export type ValidateArgsMap = {
+  [UserTokenType.INITIAL_SETUP]: {
+    type: UserTokenType.INITIAL_SETUP;
+    tokenId: number;
+    token: string;
+    sessionId?: string;
+    skipSessionCheck?: boolean;
+  };
+  [UserTokenType.EMAIL_CONFIRMATION]: {
+    type: UserTokenType.EMAIL_CONFIRMATION;
+    tokenId: number;
+    token: string;
+  };
+  [UserTokenType.EMAIL_CHANGE]: {
+    type: UserTokenType.EMAIL_CHANGE;
+    tokenId: number;
+    token: string;
+  };
+  [UserTokenType.PASSWORD_RESET]: {
+    type: UserTokenType.PASSWORD_RESET;
+    tokenId: number;
+    token: string;
+  };
+  [UserTokenType.REFRESH]: {
+    type: UserTokenType.REFRESH;
+    tokenId: number;
+    token: string;
+    deviceId: string;
+    sessionId: string;
+  };
+  [UserTokenType.TWO_FA]: {
+    type: UserTokenType.TWO_FA;
+    tokenId: number;
+    token: string;
+    sessionId: string;
+  };
+};
 
-export type CreateTokenArgs<T extends UserTokenType> = {
-  type: T;
-} & UserArg<T> &
-  ExtraArg<T> &
-  DeviceArg<T>;
+export type ValidateTokenArgs<T extends UserTokenType> = ValidateArgsMap[T];
+
+export type AnyValidateTokenArgs = ValidateArgsMap[UserTokenType];
+
+export type ParsedToken = {
+  tokenId: number;
+  rawToken: string;
+};

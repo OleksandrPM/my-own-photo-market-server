@@ -11,13 +11,14 @@ export class EmailChangeTokenService {
     return this.tokenService.createToken({
       type: UserTokenType.EMAIL_CHANGE,
       user,
-      extra: { newEmail },
+      newEmail,
     });
   }
 
-  async validateEmailChangeToken(token: string) {
+  async validateEmailChangeToken(tokenId: number, token: string) {
     return this.tokenService.validateToken({
       type: UserTokenType.EMAIL_CHANGE,
+      tokenId,
       token,
     });
   }

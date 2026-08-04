@@ -7,17 +7,20 @@ import { UserEntity } from 'src/app/product/profiles/entities/user.entity';
 export class TwoFactorAuthTokenService {
   constructor(private readonly tokenService: TokenService) {}
 
-  async createTwoFaToken(user: UserEntity) {
+  async createTwoFaToken(user: UserEntity, sessionId: string) {
     return this.tokenService.createToken({
       type: UserTokenType.TWO_FA,
       user,
+      sessionId,
     });
   }
 
-  async validateTwoFaToken(token: string) {
+  async validateTwoFaToken(tokenId: number, token: string, sessionId: string) {
     return this.tokenService.validateToken({
       type: UserTokenType.TWO_FA,
+      tokenId,
       token,
+      sessionId,
     });
   }
 }
