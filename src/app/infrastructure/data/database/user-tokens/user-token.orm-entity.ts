@@ -13,6 +13,23 @@ import { UserTokenPayload } from 'src/app/system/tokens/tokens.payload';
 @Index('user_tokens_user_id_idx', ['userId'])
 @Index('user_tokens_type_idx', ['type'])
 @Index('user_tokens_expires_at_idx', ['expiresAt'])
+@Index('user_tokens_session_id_idx', ['sessionId'])
+@Index('user_tokens_token_hash_uq', ['tokenHash'], { unique: true })
+@Index(
+  'user_tokens_active_user_type_created_idx',
+  ['userId', 'type', 'createdAt'],
+  {
+    where: `"revoked_at" IS NULL`,
+  },
+)
+@Index(
+  'user_tokens_active_session_type_created_idx',
+  ['sessionId', 'type', 'createdAt'],
+  {
+    where: `"revoked_at" IS NULL`,
+  },
+)
+@Index('user_tokens_revoked_at_idx', ['revokedAt'])
 export class UserTokenOrmEntity {
   @PrimaryGeneratedColumn()
   id!: number;
@@ -54,6 +71,13 @@ export class UserTokenOrmEntity {
     nullable: true,
   })
   deviceId!: string | null;
+
+  @Column({
+    name: 'session_id',
+    type: 'uuid',
+    nullable: true,
+  })
+  sessionId!: string | null;
 
   @Column({
     name: 'revoked_at',

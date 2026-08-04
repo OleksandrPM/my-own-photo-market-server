@@ -1,10 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOptionsWhere, IsNull, Repository } from 'typeorm';
-
+import { IsNull, Raw, Repository } from 'typeorm';
 import { DbConnectionName } from '../database.config';
 import { UserTokenOrmEntity } from './user-token.orm-entity';
-import { UserTokenType } from 'src/app/system/tokens/tokens.types';
+import { UserTokenPayload } from 'src/app/system/tokens/tokens.payload';
+import {
+  TokenFindManyOptions,
+  TokenFindOneOptions,
+  TokenPatch,
+  TokenWhere,
+} from './user-tokens.types';
 
 @Injectable()
 export class UserTokensRepository {
@@ -16,40 +21,17 @@ export class UserTokensRepository {
     private readonly editor: Repository<UserTokenOrmEntity>,
   ) {}
 
-  // ---------- Read ----------
+  // ---------- helpers ----------
 
-  findActiveByWhere(where: FindOptionsWhere<UserTokenOrmEntity>) {
-    return this.reader.find({
-      where: {
-        ...where,
-        revokedAt: IsNull(),
-      },
-      order: { createdAt: 'DESC' },
-    });
+  private activeWhere(where: TokenWhere): TokenWhere {
+    return {
+      ...where,
+      revokedAt: IsNull(),
+      expiresAt: Raw((alias) => `${alias} > NOW()`),
+    };
   }
 
-  findById(id: number) {
-    return this.reader.findOneBy({ id });
-  }
-
-  findLatestActiveInitialSetupByDeviceAndOwnerEmail(
-    email: string,
-    deviceId: string,
-  ) {
-    return (
-      this.reader
-        .createQueryBuilder('t')
-        .where('t.type = :type', { type: UserTokenType.INITIAL_SETUP })
-        .andWhere('t.revokedAt IS NULL')
-        .andWhere('t.deviceId = :deviceId', { deviceId })
-        // JSONB: payload ->> 'ownerEmail'
-        .andWhere(`t.payload ->> 'ownerEmail' = :email`, { email })
-        .orderBy('t.createdAt', 'DESC')
-        .getOne()
-    );
-  }
-
-  // ---------- Write ----------
+  // ---------- Write methods ----------
 
   create(payload: Partial<UserTokenOrmEntity>) {
     return this.editor.create(payload);
@@ -59,20 +41,83 @@ export class UserTokensRepository {
     return this.editor.save(entity);
   }
 
-  /**
-   * Revoke (set revokedAt) for matching records
-   */
-  revokeWhere(
-    where: FindOptionsWhere<UserTokenOrmEntity>,
-    revokedAt = new Date(),
-  ) {
-    return this.editor.update(where, { revokedAt });
+  // ---------- Read methods ----------
+
+  findById(id: number, options?: TokenFindOneOptions) {
+    return this.reader.findOne({ where: { id }, ...options });
   }
 
-  /**
-   * Revoke by id
-   */
+  findOne(where: TokenWhere, options?: TokenFindOneOptions) {
+    return this.reader.findOne({ where, ...options });
+  }
+
+  findMany(where: TokenWhere, options?: TokenFindManyOptions) {
+    return this.reader.find({ where, ...options });
+  }
+
+  findActiveMany(where: TokenWhere, options?: TokenFindManyOptions) {
+    return this.reader.find({
+      where: this.activeWhere(where),
+      ...options,
+    });
+  }
+
+  findActiveOne(where: TokenWhere, options?: TokenFindOneOptions) {
+    return this.reader.findOne({
+      where: this.activeWhere(where),
+      ...options,
+    });
+  }
+
+  // ---------- Update methods ----------
+
+  updateById(id: number, patch: TokenPatch) {
+    return this.editor.update({ id }, patch);
+  }
+
+  updateWhere(where: TokenWhere, patch: TokenPatch) {
+    return this.editor.update(where, patch);
+  }
+
+  updatePayloadById(id: number, payload: UserTokenPayload | null) {
+    return this.editor.update({ id }, { payload });
+  }
+
+  updatePayloadWhere(where: TokenWhere, payload: UserTokenPayload | null) {
+    return this.editor.update(where, { payload });
+  }
+
+  updateActivePayloadById(id: number, payload: UserTokenPayload | null) {
+    return this.editor.update({ id, revokedAt: IsNull() }, { payload });
+  }
+
+  updateActivePayloadWhere(
+    where: TokenWhere,
+    payload: UserTokenPayload | null,
+  ) {
+    return this.editor.update({ ...where, revokedAt: IsNull() }, { payload });
+  }
+
+  async mergePayloadById(id: number, payloadPatch: Record<string, unknown>) {
+    await this.editor
+      .createQueryBuilder()
+      .update(UserTokenOrmEntity)
+      .set({
+        payload: () => `COALESCE(payload, '{}'::jsonb) || :patch::jsonb`,
+      })
+      .where('id = :id', { id })
+      .andWhere('revoked_at IS NULL')
+      .setParameter('patch', JSON.stringify(payloadPatch))
+      .execute();
+  }
+
+  // ---------- Revoke methods ----------
+
   revokeById(id: number, revokedAt = new Date()) {
-    return this.editor.update(id, { revokedAt });
+    return this.editor.update({ id, revokedAt: IsNull() }, { revokedAt });
+  }
+
+  revokeWhere(where: TokenWhere, revokedAt = new Date()) {
+    return this.editor.update({ ...where, revokedAt: IsNull() }, { revokedAt });
   }
 }
