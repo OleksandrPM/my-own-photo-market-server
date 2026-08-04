@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SetupAdminDto } from './dto/setup-admin.dto';
 import { ProfilesService } from '../../product/profiles/profiles.service';
@@ -6,9 +6,16 @@ import { SetupVerifyEmailDto } from './dto/setup-verify-email.dto';
 import { SetupIsEnabledResponseDto } from './dto/setup-is-enabled-response.dto';
 import { TokenManagerService } from '../tokens/tokens-manager.service';
 import { EmailManagerService } from '../communications/email/email-manager.service';
+import { SetupStatusResponseDto } from './dto/setup-status-response.dto';
+import { SetupCreatedminResponseDto } from './dto/setup-create-admin-response.dto';
+import { decodeToken, encodeToken } from '../tokens/tokens.utils';
+import { TypedUserToken, UserTokenType } from '../tokens/tokens.types';
+import { randomUUID, UUID } from 'crypto';
 
 @Injectable()
 export class SetupService {
+  private readonly logger = new Logger(SetupService.name);
+
   constructor(
     private readonly config: ConfigService,
     private readonly tokenService: TokenManagerService,
@@ -22,93 +29,114 @@ export class SetupService {
     return { isSetupEnabled: !isAdminExists };
   }
 
-  async sendSetupEmail({ email }: SetupVerifyEmailDto, deviceId: string) {
+  async verifyOwnerEmail({
+    email,
+  }: SetupVerifyEmailDto): Promise<{ message: string; sessionId: UUID }> {
     const ownerEmail = this.config.get<string>('OWNER_EMAIL');
 
+    // check if OWNER_EMAIL configured
     if (!ownerEmail) {
       throw new UnauthorizedException('Owner email not configured');
     }
 
+    // revoke all previous setup tokens
+    await this.tokenService.revokeTokensByType(UserTokenType.INITIAL_SETUP);
+
+    const response = {
+      message: `Check your email ${email}`,
+      sessionId: randomUUID(),
+    };
+
     if (email !== ownerEmail) {
-      throw new UnauthorizedException(
-        'Provided email does not match owner email',
-      );
+      this.logger.warn(`Invalid email attempt: ${email}`);
+
+      return response;
     }
 
-    const response = await this.tokenService.createSetupToken(
-      ownerEmail,
-      deviceId,
-    );
+    const { id, rawToken, expiresAt } =
+      await this.tokenService.createSetupToken(ownerEmail, response.sessionId);
+
+    const encodedToken = encodeToken(id, rawToken);
 
     await this.emailService.sendSetupConfirmationEmail(
       ownerEmail,
-      response.rawToken,
-      response.expiresAt,
+      encodedToken,
+      expiresAt,
     );
 
-    return { message: 'Setup token generated and sent to owner email' };
+    return response;
   }
 
-  async confirmOwnerEmail(token: string) {
-    const tokenRecord = await this.tokenService.validateSetupToken(token);
+  async confirmOwnerEmail(
+    encodedToken: string,
+  ): Promise<{ isConfirmed: boolean }> {
+    const { tokenId, rawToken } = decodeToken(encodedToken);
 
-    if (!tokenRecord || !tokenRecord.payload) {
-      throw new UnauthorizedException('Invalid or expired setup token');
+    const tokenRecord = await this.tokenService.validateSetupTokenFromEmail(
+      tokenId,
+      rawToken,
+    );
+
+    if (!tokenRecord.payload) {
+      throw new UnauthorizedException('Setup token has no payload');
     }
 
-    const { tokenRecord: updatedTokenRecord } =
-      await this.tokenService.confirmOwnerEmail(tokenRecord.id);
+    const updatedTokenRecord = await this.tokenService.confirmOwnerEmail(
+      tokenRecord.id,
+    );
 
-    const payload = updatedTokenRecord.payload as {
-      ownerEmail: string;
-      isConfirmed: boolean;
+    return {
+      isConfirmed: updatedTokenRecord.payload.isConfirmed,
     };
-
-    return { isConfirmed: payload.isConfirmed };
   }
 
-  async isOwnerEmailConfirmed(email: string, deviceId: string) {
-    const { isEmailConfirmed } = await this.tokenService.isOwnerEmailConfirmed(
-      email,
-      deviceId,
-    );
+  async getStatus(sessionId: string): Promise<SetupStatusResponseDto> {
+    const { isEmailConfirmed } =
+      await this.tokenService.isOwnerEmailConfirmed(sessionId);
 
     return { isEmailConfirmed };
   }
 
-  async createInitialAdmin(dto: SetupAdminDto, deviceId: string) {
-    const token = await this.tokenService.validateSetupToken(dto.token);
+  async createInitialAdmin(
+    { password }: SetupAdminDto,
+    sessionId: string,
+  ): Promise<SetupCreatedminResponseDto> {
+    const tokenRecord: TypedUserToken<UserTokenType.INITIAL_SETUP> | null =
+      await this.tokenService.getSetupTokenBySessionId(sessionId);
 
-    if (!token || !token.payload) {
+    if (!tokenRecord) {
+      throw new UnauthorizedException('No setup token found for this session');
+    }
+
+    const {
+      id,
+      sessionId: tokenSessionId,
+      payload: { ownerEmail, isConfirmed },
+    } = tokenRecord;
+
+    if (!ownerEmail || !isConfirmed) {
       throw new UnauthorizedException('Invalid or expired setup token');
     }
 
-    const payload = token.payload as {
-      ownerEmail: string;
-      isConfirmed: boolean;
-    };
-
-    if (!payload.isConfirmed) {
+    if (!isConfirmed) {
       throw new UnauthorizedException('Owner email is not confirmed');
     }
 
-    if (dto.email !== payload.ownerEmail) {
-      throw new UnauthorizedException(
-        'Provided email does not match owner email',
-      );
-    }
-
-    if (deviceId !== token.deviceId) {
-      throw new UnauthorizedException('Device ID does not match');
+    if (sessionId !== tokenSessionId) {
+      throw new UnauthorizedException('Session ID does not match');
     }
 
     const user = await this.profilesService.createAdmin({
-      email: dto.email,
-      password: dto.password,
+      email: ownerEmail,
+      password: password,
     });
 
-    await this.tokenService.revokeToken(token.id);
+    await this.tokenService.revokeTokenById(id);
 
-    return user;
+    if (user) {
+      return { isAdminCreated: true };
+    } else {
+      return { isAdminCreated: false };
+    }
   }
 }
