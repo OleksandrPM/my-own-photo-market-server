@@ -1,6 +1,7 @@
 import {
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { hashPassword } from 'src/app/common/utils';
@@ -12,6 +13,7 @@ import { UserEntity } from './entities/user.entity';
 import { AvatarStorageService } from 'src/app/infrastructure/storage/image-storage/avatar-storage.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { CreateAdminDto } from './dto/create-admin.dto';
+import { ERROR_CODES } from 'src/types/error.types';
 
 @Injectable()
 export class ProfilesService {
@@ -20,13 +22,20 @@ export class ProfilesService {
     private readonly avatarStorageService: AvatarStorageService,
   ) {}
 
+  private readonly logger = new Logger(ProfilesService.name);
+
   // ---------- helpers ----------
 
   private async ensureEmailUnique(email: string) {
     const exists = await this.usersRepository.existsByEmail(email);
 
     if (exists) {
-      throw new ConflictException(`User with email ${email} already exists`);
+      this.logger.warn(`Email: ${email} is not unique`);
+
+      throw new ConflictException({
+        code: ERROR_CODES.CONFLICT,
+        message: 'Operation not allowed',
+      });
     }
   }
 
@@ -38,7 +47,10 @@ export class ProfilesService {
     const user = await this.usersRepository.findById(id);
 
     if (!user) {
-      throw new NotFoundException(`User ${id} not found`);
+      throw new NotFoundException({
+        code: ERROR_CODES.NOT_FOUND,
+        message: `User ${id} not found`,
+      });
     }
 
     return user;

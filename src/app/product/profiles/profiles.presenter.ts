@@ -25,7 +25,7 @@ export class ProfilePresenter {
 
     if (user.avatarKey) {
       try {
-        avatarUrl = await this.avatarStorage.getAvatarUrl(user.avatarKey);
+        avatarUrl = await this.avatarStorage.getAvatarUrlByKey(user.avatarKey);
       } catch (e) {
         this.logger.warn(
           `Avatar URL resolve failed`,
