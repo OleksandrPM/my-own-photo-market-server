@@ -18,7 +18,7 @@ export class AvatarStorageService {
     return this.r2.createSignedUrl(key, 3600); // URL valid for 1 hour
   }
 
-  async getAvatarUrl(avatarKey: string): Promise<string> {
+  async getAvatarUrlByKey(avatarKey: string): Promise<string> {
     return this.r2.createSignedUrl(avatarKey, 3600); // URL valid for 1 hour
   }
 
