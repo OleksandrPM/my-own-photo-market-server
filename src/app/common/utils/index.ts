@@ -1,6 +1,12 @@
 import { toCamelCase } from './string.utils';
 import { hashPassword, verifyPassword } from './password.utils';
 
-import { calculateMinutesUntil } from './time.utils';
+import { toMs, calculateMinutesUntil } from './time.utils';
 
-export { toCamelCase, hashPassword, verifyPassword, calculateMinutesUntil };
+export {
+  toCamelCase,
+  hashPassword,
+  verifyPassword,
+  toMs,
+  calculateMinutesUntil,
+};
