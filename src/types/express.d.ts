@@ -1,16 +1,9 @@
-import { UserRole } from 'src/app/product/profiles/user.types';
+import type { AuthenticatedUser } from '../app/system/auth/auth.types';
 
 declare global {
   namespace Express {
-    interface User {
-      id: string;
-      email: string;
-      role: UserRole;
-      isVerified: boolean;
-    }
-
     interface Request {
-      user: User;
+      user?: AuthenticatedUser;
     }
   }
 }
