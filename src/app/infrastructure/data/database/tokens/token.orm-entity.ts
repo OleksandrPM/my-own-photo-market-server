@@ -6,10 +6,10 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
-import { UserTokenType } from 'src/app/system/tokens/tokens.types';
+import { TokenType } from 'src/app/system/tokens/tokens.types';
 import { UserTokenPayload } from 'src/app/system/tokens/tokens.payload';
 
-@Entity('user_tokens')
+@Entity('tokens')
 @Index('user_tokens_user_id_idx', ['userId'])
 @Index('user_tokens_type_idx', ['type'])
 @Index('user_tokens_expires_at_idx', ['expiresAt'])
@@ -30,16 +30,15 @@ import { UserTokenPayload } from 'src/app/system/tokens/tokens.payload';
   },
 )
 @Index('user_tokens_revoked_at_idx', ['revokedAt'])
-export class UserTokenOrmEntity {
+export class TokenOrmEntity {
   @PrimaryGeneratedColumn()
   id!: number;
 
   @Column({
-    name: 'user_id',
-    type: 'int',
-    nullable: true,
+    type: 'enum',
+    enum: TokenType,
   })
-  userId!: number | null;
+  type!: TokenType;
 
   @Column({
     name: 'token_hash',
@@ -48,22 +47,11 @@ export class UserTokenOrmEntity {
   tokenHash!: string;
 
   @Column({
-    type: 'enum',
-    enum: UserTokenType,
-  })
-  type!: UserTokenType;
-
-  @Column({
-    type: 'jsonb',
+    name: 'user_id',
+    type: 'int',
     nullable: true,
   })
-  payload!: UserTokenPayload | null;
-
-  @Column({
-    name: 'expires_at',
-    type: 'timestamptz',
-  })
-  expiresAt!: Date;
+  userId!: number | null;
 
   @Column({
     name: 'device_id',
@@ -80,12 +68,24 @@ export class UserTokenOrmEntity {
   sessionId!: string | null;
 
   @Column({
+    type: 'jsonb',
+    nullable: true,
+  })
+  payload!: UserTokenPayload | null;
+
+  @CreateDateColumn({ name: 'created_at' })
+  createdAt!: Date;
+
+  @Column({
+    name: 'expires_at',
+    type: 'timestamptz',
+  })
+  expiresAt!: Date;
+
+  @Column({
     name: 'revoked_at',
     type: 'timestamptz',
     nullable: true,
   })
   revokedAt!: Date | null;
-
-  @CreateDateColumn({ name: 'created_at' })
-  createdAt!: Date;
 }

@@ -2,23 +2,23 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IsNull, Raw, Repository } from 'typeorm';
 import { DbConnectionName } from '../database.config';
-import { UserTokenOrmEntity } from './user-token.orm-entity';
+import { TokenOrmEntity } from './token.orm-entity';
 import { UserTokenPayload } from 'src/app/system/tokens/tokens.payload';
 import {
   TokenFindManyOptions,
   TokenFindOneOptions,
   TokenPatch,
   TokenWhere,
-} from './user-tokens.types';
+} from './tokens-data.types';
 
 @Injectable()
-export class UserTokensRepository {
+export class TokensRepository {
   constructor(
-    @InjectRepository(UserTokenOrmEntity, DbConnectionName.READER)
-    private readonly reader: Repository<UserTokenOrmEntity>,
+    @InjectRepository(TokenOrmEntity, DbConnectionName.READER)
+    private readonly reader: Repository<TokenOrmEntity>,
 
-    @InjectRepository(UserTokenOrmEntity, DbConnectionName.EDITOR)
-    private readonly editor: Repository<UserTokenOrmEntity>,
+    @InjectRepository(TokenOrmEntity, DbConnectionName.EDITOR)
+    private readonly editor: Repository<TokenOrmEntity>,
   ) {}
 
   // ---------- helpers ----------
@@ -33,11 +33,11 @@ export class UserTokensRepository {
 
   // ---------- Write methods ----------
 
-  create(payload: Partial<UserTokenOrmEntity>) {
+  create(payload: Partial<TokenOrmEntity>) {
     return this.editor.create(payload);
   }
 
-  save(entity: UserTokenOrmEntity) {
+  save(entity: TokenOrmEntity) {
     return this.editor.save(entity);
   }
 
@@ -101,7 +101,7 @@ export class UserTokensRepository {
   async mergePayloadById(id: number, payloadPatch: Record<string, unknown>) {
     await this.editor
       .createQueryBuilder()
-      .update(UserTokenOrmEntity)
+      .update(TokenOrmEntity)
       .set({
         payload: () => `COALESCE(payload, '{}'::jsonb) || :patch::jsonb`,
       })
