@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { Reflector } from '@nestjs/core';
-import { CookieService } from 'src/app/system/cookies/cookie.service';
+import { CookiesService } from 'src/app/system/cookies/cookies.service';
 import { TokenManagerService } from 'src/app/system/tokens/tokens-manager.service';
 import { CookieName } from 'src/app/system/cookies/cookies.types';
 import { ERROR_CODES } from 'src/types/error.types';
@@ -17,7 +17,7 @@ export class CsrfGuard implements CanActivate {
   constructor(
     private readonly tokenService: TokenManagerService,
     private readonly reflector: Reflector,
-    private readonly cookieService: CookieService,
+    private readonly cookieService: CookiesService,
   ) {}
 
   private isSafeMethod(method: string): boolean {
@@ -48,24 +48,26 @@ export class CsrfGuard implements CanActivate {
       return true;
     }
 
-    const deviceId = req.cookies?.[CookieName.DEVICE_ID];
+    const deviceId = req.cookies[CookieName.DEVICE_ID];
+    const csrfCookie = req.cookies[CookieName.CSRF_TOKEN];
     const csrfHeader = req.get('x-csrf-token');
 
-    // Base validation: both device_id cookie and x-csrf-token header must be present
-    if (!deviceId || !csrfHeader) {
+    // Base validation: device_id, csrf cookies and x-csrf-token header must be present
+    if (!deviceId || !csrfCookie || !csrfHeader) {
       throw new ForbiddenException({
         code: ERROR_CODES.FORBIDDEN,
         message: 'CSRF token missing',
       });
     }
 
-    // Validation: check if the provided CSRF token is valid for the given device ID
-    const isValid = await this.tokenService.validateCsrfToken(
-      csrfHeader,
-      deviceId,
-    );
+    if (csrfCookie !== csrfHeader) {
+      throw new ForbiddenException({
+        code: ERROR_CODES.FORBIDDEN,
+        message: 'CSRF token mismatch',
+      });
+    }
 
-    if (!isValid) {
+    if (!this.tokenService.validateCsrfToken(csrfHeader, deviceId)) {
       throw new ForbiddenException({
         code: ERROR_CODES.FORBIDDEN,
         message: 'Invalid CSRF token',
@@ -73,11 +75,10 @@ export class CsrfGuard implements CanActivate {
     }
 
     // Update CSRF token with a certain probability to enhance security (e.g., ~10% of requests)
-    const shouldRefresh = this.shouldRefreshToken();
-
-    if (shouldRefresh) {
-      const newToken = await this.tokenService.generateCsrfToken(deviceId);
-      this.cookieService.setCsrfCookie(res, newToken);
+    if (this.shouldRefreshToken()) {
+      const newToken = this.tokenService.generateCsrfToken(deviceId);
+      this.cookieService.setCookie(res, CookieName.CSRF_TOKEN, newToken);
+      req.cookies[CookieName.CSRF_TOKEN] = newToken;
     }
 
     return true;
