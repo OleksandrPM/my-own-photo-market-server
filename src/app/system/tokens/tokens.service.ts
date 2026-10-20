@@ -1,111 +1,104 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { IsNull } from 'typeorm';
 
-import { TOKEN_TTL } from './tokens.ttl';
 import {
-  AnyTypedUserToken,
-  AnyValidateTokenArgs,
   CreateTokenArgs,
-  CreateArgsMap,
-  TOKEN_UNIQUENESS,
-  TypedUserToken,
-  UniquenessType,
-  UserTokenType,
-  ValidateArgsMap,
+  TypedToken,
+  TokenType,
+  PersistentTokenType,
+  ValidateTokenArgs,
 } from './tokens.types';
-import {
-  buildTokenPayload,
-  TokenPayloadInputs,
-  UserTokenPayload,
-} from './tokens.payload';
+import { buildTokenPayload, UserTokenPayload } from './tokens.payload';
 import {
   generateRandomToken,
   hashToken,
   verifyTokenHash,
 } from './tokens.utils';
 
-import { UserTokensRepository } from 'src/app/infrastructure/data/database/user-tokens/user-tokens.repository';
-import { TokenWhere } from 'src/app/infrastructure/data/database/user-tokens/user-tokens.types';
-
-import { UserEntity } from 'src/app/product/profiles/entities/user.entity';
+import { TokensRepository } from 'src/app/infrastructure/data/database/tokens/tokens.repository';
+import { TokenWhere } from 'src/app/infrastructure/data/database/tokens/tokens-data.types';
+import { TokenOrmEntity } from 'src/app/infrastructure/data/database/tokens/token.orm-entity';
+import { TOKEN_CONFIG } from './tokens.config';
 
 @Injectable()
 export class TokenService {
-  constructor(private readonly tokensRepository: UserTokensRepository) {}
+  constructor(private readonly tokensRepository: TokensRepository) {}
 
   // ---------------- Helpers ----------------
 
-  private requiresDeviceId(type: UserTokenType): boolean {
-    return TOKEN_UNIQUENESS[type] === UniquenessType.PER_DEVICE;
+  private requiresDeviceId(type: PersistentTokenType): boolean {
+    return TOKEN_CONFIG[type].requiresDeviceId;
   }
 
-  private requiresSessionId(type: UserTokenType): boolean {
-    return (
-      type === UserTokenType.INITIAL_SETUP ||
-      type === UserTokenType.REFRESH ||
-      type === UserTokenType.TWO_FA
-    );
+  private requiresSessionId(type: PersistentTokenType): boolean {
+    return TOKEN_CONFIG[type].requiresSessionId;
   }
 
-  private requiresUserAssociation(type: UserTokenType): boolean {
-    return type !== UserTokenType.INITIAL_SETUP;
-  }
-
-  private buildRevokeWhereForCreate<T extends UserTokenType>(
+  private buildRevokeWhereForCreate<T extends PersistentTokenType>(
     args: CreateTokenArgs<T>,
   ): TokenWhere {
     switch (args.type) {
-      case UserTokenType.INITIAL_SETUP:
+      case TokenType.INITIAL_SETUP:
         return {
           type: args.type,
           sessionId: args.sessionId,
           revokedAt: IsNull(),
         };
 
-      case UserTokenType.REFRESH:
+      case TokenType.REFRESH:
         return {
           type: args.type,
-          userId: args.user.id,
+          userId: args.userId,
           deviceId: args.deviceId,
           revokedAt: IsNull(),
         };
 
-      // SINGLE user-bound токени
-      case UserTokenType.EMAIL_CONFIRMATION:
-      case UserTokenType.EMAIL_CHANGE:
-      case UserTokenType.PASSWORD_RESET:
-      case UserTokenType.TWO_FA:
+      // SINGLE user-bound tokens
+      case TokenType.PASSWORD_RESET:
         return {
           type: args.type,
-          userId: args.user ? args.user.id : IsNull(),
+          userId: args.userId === null ? IsNull() : args.userId,
+          revokedAt: IsNull(),
+        };
+
+      case TokenType.EMAIL_CONFIRMATION:
+      case TokenType.EMAIL_CHANGE:
+      case TokenType.TWO_FA:
+        return {
+          type: args.type,
+          userId: args.userId,
           revokedAt: IsNull(),
         };
 
       default: {
-        // exhaustive
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const _never: never = args;
-        return { revokedAt: IsNull() } as TokenWhere;
+        const exhaustive: never = args;
+        throw new Error(`Unsupported token type: ${exhaustive}`);
       }
     }
   }
 
-  private async revokeExistingTokensForCreate<T extends UserTokenType>(
+  private async revokeExistingTokensForCreate<T extends PersistentTokenType>(
     args: CreateTokenArgs<T>,
   ) {
     const where = this.buildRevokeWhereForCreate(args);
     await this.tokensRepository.revokeWhere(where, new Date());
   }
 
+  private toTypedToken<T extends PersistentTokenType>(
+    token: TokenOrmEntity,
+  ): TypedToken<T> {
+    return token as TypedToken<T>;
+  }
+
   // ---------------- Public API ----------------
 
-  async createToken<T extends UserTokenType>(
+  async createToken<T extends PersistentTokenType>(
     args: CreateTokenArgs<T>,
   ): Promise<{
     id: number;
     rawToken: string;
     expiresAt: Date;
-    record: TypedUserToken<T>;
+    record: TypedToken<T>;
   }> {
     const type = args.type;
 
@@ -116,28 +109,16 @@ export class TokenService {
     const rawToken = generateRandomToken();
     const tokenHash = await hashToken(rawToken);
 
-    // 3) payload (будується з args, які є TokenPayloadInputs[T])
-    const payload = buildTokenPayload(
-      type,
-      args as unknown as TokenPayloadInputs[UserTokenType],
-    ) as UserTokenPayload;
+    // 3) build payload
+    const payload = buildTokenPayload(type, args);
 
     // 4) entity fields
-    const user = (args as CreateArgsMap[UserTokenType])
-      .user as UserEntity | null;
-
-    const deviceId =
-      'deviceId' in args
-        ? (args as CreateArgsMap[UserTokenType.REFRESH]).deviceId
-        : null;
-
-    const sessionId =
-      'sessionId' in args ? ((args as any).sessionId ?? null) : null;
-
-    const expiresAt = new Date(Date.now() + TOKEN_TTL[type]);
+    const deviceId = 'deviceId' in args ? args.deviceId : null;
+    const sessionId = 'sessionId' in args ? args.sessionId : null;
+    const expiresAt = new Date(Date.now() + TOKEN_CONFIG[type].ttl);
 
     const record = this.tokensRepository.create({
-      userId: user ? user.id : null,
+      userId: args.userId,
       type,
       tokenHash,
       payload,
@@ -152,49 +133,39 @@ export class TokenService {
       id: saved.id,
       rawToken,
       expiresAt: saved.expiresAt,
-      record: saved as unknown as TypedUserToken<T>,
+      record: this.toTypedToken<T>(saved),
     };
   }
 
-  // ---- validateToken overloads (щоб IDE підказувала правильно) ----
-
-  async validateToken(
-    args: ValidateArgsMap[UserTokenType.EMAIL_CONFIRMATION],
-  ): Promise<TypedUserToken<UserTokenType.EMAIL_CONFIRMATION>>;
-  async validateToken(
-    args: ValidateArgsMap[UserTokenType.INITIAL_SETUP],
-  ): Promise<TypedUserToken<UserTokenType.INITIAL_SETUP>>;
-  async validateToken(
-    args: ValidateArgsMap[UserTokenType.EMAIL_CHANGE],
-  ): Promise<TypedUserToken<UserTokenType.EMAIL_CHANGE>>;
-  async validateToken(
-    args: ValidateArgsMap[UserTokenType.PASSWORD_RESET],
-  ): Promise<TypedUserToken<UserTokenType.PASSWORD_RESET>>;
-  async validateToken(
-    args: ValidateArgsMap[UserTokenType.REFRESH],
-  ): Promise<TypedUserToken<UserTokenType.REFRESH>>;
-  async validateToken(
-    args: ValidateArgsMap[UserTokenType.TWO_FA],
-  ): Promise<TypedUserToken<UserTokenType.TWO_FA>>;
-
-  async validateToken(args: AnyValidateTokenArgs): Promise<AnyTypedUserToken> {
+  async validateToken<T extends PersistentTokenType>(
+    args: ValidateTokenArgs<T>,
+  ): Promise<TypedToken<T>> {
     const now = new Date();
 
-    // 1) load by id
     const record = await this.tokensRepository.findById(args.tokenId);
 
-    if (!record) throw new UnauthorizedException('Invalid token');
-    if (record.type !== args.type)
+    if (!record) {
+      throw new UnauthorizedException('Invalid token');
+    }
+
+    if (record.type !== args.type) {
       throw new UnauthorizedException('Invalid token type');
-    if (record.revokedAt) throw new UnauthorizedException('Token revoked');
-    if (record.expiresAt < now)
+    }
+
+    if (record.revokedAt) {
+      throw new UnauthorizedException('Token revoked');
+    }
+
+    if (record.expiresAt < now) {
       throw new UnauthorizedException('Token expired');
+    }
 
-    // 2) verify secret
     const ok = await verifyTokenHash(record.tokenHash, args.token);
-    if (!ok) throw new UnauthorizedException('Invalid token');
 
-    // 3) device check
+    if (!ok) {
+      throw new UnauthorizedException('Invalid token');
+    }
+
     if (this.requiresDeviceId(args.type)) {
       if (!('deviceId' in args) || !args.deviceId) {
         throw new UnauthorizedException('DeviceId is required');
@@ -205,7 +176,6 @@ export class TokenService {
       }
     }
 
-    // 4) session check
     if (
       this.requiresSessionId(args.type) &&
       !('skipSessionCheck' in args && args.skipSessionCheck)
@@ -219,28 +189,26 @@ export class TokenService {
       }
     }
 
-    // 5) user association rule
-    if (this.requiresUserAssociation(args.type)) {
-      if (record.userId === null) {
-        throw new UnauthorizedException('Token is not associated with a user');
-      }
-    } else {
-      // INITIAL_SETUP must be anonymous
+    if (args.type === TokenType.INITIAL_SETUP) {
       if (record.userId !== null) {
         throw new UnauthorizedException(
           'INITIAL_SETUP token must not be associated with a user',
         );
       }
+    } else {
+      if (record.userId === null) {
+        throw new UnauthorizedException('Token is not associated with a user');
+      }
     }
 
-    return record as unknown as AnyTypedUserToken;
+    return this.toTypedToken<T>(record);
   }
 
   async revokeTokenById(id: number, date = new Date()) {
     await this.tokensRepository.revokeById(id, date);
   }
 
-  async revokeTokensByType(tokenType: UserTokenType, date = new Date()) {
+  async revokeTokensByType(tokenType: PersistentTokenType, date = new Date()) {
     return this.tokensRepository.revokeWhere({ type: tokenType }, date);
   }
 

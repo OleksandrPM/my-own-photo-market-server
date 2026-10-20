@@ -1,6 +1,6 @@
-import { UserTokenType } from '../tokens.types';
+import { TokenType } from '../tokens.types';
 
 export class ValidateTokenDto {
-  type!: UserTokenType;
+  type!: TokenType;
   token!: string;
 }

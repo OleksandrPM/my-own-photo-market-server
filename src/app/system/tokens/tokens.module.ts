@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TokenService } from './tokens.service';
-import { JwtModule, JwtModuleOptions } from '@nestjs/jwt';
-import { ConfigService } from '@nestjs/config';
+import { JwtModule } from '@nestjs/jwt';
 import { SetupTokenService } from './handlers/setup-token.service';
 import { RefreshTokenService } from './handlers/refresh-token.service';
 import { EmailConfirmTokenService } from './handlers/email-confirm-token.service';
@@ -9,23 +8,20 @@ import { PasswordResetTokenService } from './handlers/password-reset-token.servi
 import { EmailChangeTokenService } from './handlers/email-change-token.service';
 import { TwoFactorAuthTokenService } from './handlers/two-factor-token.service';
 import { TokenManagerService } from './tokens-manager.service';
-import { UserTokensDataModule } from 'src/app/infrastructure/data/database/user-tokens/user-tokens-data.module';
+import { TokensDataModule } from 'src/app/infrastructure/data/database/tokens/tokens-data.module';
 import { AccessTokenService } from './handlers/access-token.service';
 import { CsrfTokenService } from './handlers/csrf-token.service';
+import { JwtTokenService } from './jwt/jwt-token.service';
 
 @Module({
   imports: [
-    JwtModule.registerAsync({
-      useFactory: (config: ConfigService): JwtModuleOptions => ({
-        global: true,
-        secret: config.get<string>('JWT_SECRET'),
-        signOptions: { expiresIn: config.get<number>('JWT_EXPIRES_IN') },
-      }),
-      inject: [ConfigService],
+    JwtModule.register({
+      global: true,
     }),
-    UserTokensDataModule,
+    TokensDataModule,
   ],
   providers: [
+    JwtTokenService,
     TokenService,
     TokenManagerService,
     CsrfTokenService,
@@ -37,6 +33,6 @@ import { CsrfTokenService } from './handlers/csrf-token.service';
     EmailChangeTokenService,
     TwoFactorAuthTokenService,
   ],
-  exports: [TokenManagerService],
+  exports: [JwtTokenService, TokenManagerService],
 })
 export class TokenModule {}

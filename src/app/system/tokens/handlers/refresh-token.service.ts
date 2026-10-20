@@ -1,37 +1,26 @@
 import { Injectable } from '@nestjs/common';
 import { TokenService } from '../tokens.service';
 import { UserEntity } from 'src/app/product/profiles/entities/user.entity';
-import { UserTokenType } from '../tokens.types';
+import { TokenType } from '../tokens.types';
 
 @Injectable()
 export class RefreshTokenService {
   constructor(private readonly tokenService: TokenService) {}
 
-  async createRefreshToken(
-    user: UserEntity,
-    deviceId: string,
-    sessionId: string,
-  ) {
+  async createRefreshToken(userId: UserEntity['id'], deviceId: string) {
     return this.tokenService.createToken({
-      type: UserTokenType.REFRESH,
-      user,
+      type: TokenType.REFRESH,
+      userId,
       deviceId,
-      sessionId,
     });
   }
 
-  async validateRefreshToken(
-    tokenId: number,
-    token: string,
-    deviceId: string,
-    sessionId: string,
-  ) {
+  async validateRefreshToken(tokenId: number, token: string, deviceId: string) {
     return this.tokenService.validateToken({
-      type: UserTokenType.REFRESH,
+      type: TokenType.REFRESH,
       tokenId,
       token,
       deviceId,
-      sessionId,
     });
   }
 }

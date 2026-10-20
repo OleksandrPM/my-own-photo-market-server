@@ -1,36 +1,30 @@
-import { UserTokenOrmEntity } from 'src/app/infrastructure/data/database/user-tokens/user-token.orm-entity';
+import { TokenOrmEntity } from 'src/app/infrastructure/data/database/tokens/token.orm-entity';
 import { UserEntity } from 'src/app/product/profiles/entities/user.entity';
 import { TokenPayloads } from './tokens.payload';
 
-export enum UserTokenType {
+export enum TokenType {
+  ACCESS = 'access',
+  REFRESH = 'refresh',
   INITIAL_SETUP = 'initial_setup',
   EMAIL_CONFIRMATION = 'email_confirmation',
   EMAIL_CHANGE = 'email_change',
   PASSWORD_RESET = 'password_reset',
-  REFRESH = 'refresh',
   TWO_FA = 'two_fa',
 }
 
-export type TypedUserToken<T extends UserTokenType> = Omit<
-  UserTokenOrmEntity,
+export type PersistentTokenType = Exclude<TokenType, TokenType.ACCESS>;
+
+export type TypedToken<T extends PersistentTokenType> = Omit<
+  TokenOrmEntity,
   'payload' | 'type'
 > & {
   type: T;
   payload: TokenPayloads[T];
 };
 
-export type AnyTypedUserToken = {
-  [K in UserTokenType]: TypedUserToken<K>;
-}[UserTokenType];
-
-export const asTypedToken = <T extends UserTokenType>(
-  token: UserTokenOrmEntity | null,
-  type: T,
-): TypedUserToken<T> | null => {
-  if (!token) return null;
-  if (token.type !== type) return null;
-  return token as unknown as TypedUserToken<T>;
-};
+export type AnyTypedToken = {
+  [K in PersistentTokenType]: TypedToken<K>;
+}[PersistentTokenType];
 
 export enum UniquenessType {
   SINGLE = 'single',
@@ -38,92 +32,98 @@ export enum UniquenessType {
   MULTIPLE = 'multiple',
 }
 
-export const TOKEN_UNIQUENESS: Record<UserTokenType, UniquenessType> = {
-  [UserTokenType.INITIAL_SETUP]: UniquenessType.SINGLE,
-  [UserTokenType.EMAIL_CONFIRMATION]: UniquenessType.SINGLE,
-  [UserTokenType.EMAIL_CHANGE]: UniquenessType.SINGLE,
-  [UserTokenType.PASSWORD_RESET]: UniquenessType.SINGLE,
-  [UserTokenType.TWO_FA]: UniquenessType.SINGLE,
-  [UserTokenType.REFRESH]: UniquenessType.PER_DEVICE,
+export type AccessTokenConfig = {
+  ttl: number;
 };
 
+export type PersistentTokenConfig = {
+  ttl: number;
+  uniqueness: UniquenessType;
+  requiresDeviceId: boolean;
+  requiresSessionId: boolean;
+  requiresUserAssociation: boolean;
+};
+
+export type TokenConfigMap = {
+  [TokenType.ACCESS]: AccessTokenConfig;
+} & Record<PersistentTokenType, PersistentTokenConfig>;
+
 export type CreateArgsMap = {
-  [UserTokenType.INITIAL_SETUP]: {
-    type: UserTokenType.INITIAL_SETUP;
-    user: null;
+  [TokenType.REFRESH]: {
+    type: TokenType.REFRESH;
+    userId: UserEntity['id'];
+    deviceId: string;
+  };
+  [TokenType.INITIAL_SETUP]: {
+    type: TokenType.INITIAL_SETUP;
+    userId: null;
     sessionId: string;
     ownerEmail: string;
   };
-  [UserTokenType.EMAIL_CONFIRMATION]: {
-    type: UserTokenType.EMAIL_CONFIRMATION;
-    user: UserEntity;
+  [TokenType.EMAIL_CONFIRMATION]: {
+    type: TokenType.EMAIL_CONFIRMATION;
+    userId: UserEntity['id'];
   };
-  [UserTokenType.EMAIL_CHANGE]: {
-    type: UserTokenType.EMAIL_CHANGE;
-    user: UserEntity;
+  [TokenType.EMAIL_CHANGE]: {
+    type: TokenType.EMAIL_CHANGE;
+    userId: UserEntity['id'];
     newEmail: string;
   };
-  [UserTokenType.PASSWORD_RESET]: {
-    type: UserTokenType.PASSWORD_RESET;
-    user: UserEntity | null;
+  [TokenType.PASSWORD_RESET]: {
+    type: TokenType.PASSWORD_RESET;
+    userId: UserEntity['id'] | null;
     email: string;
   };
-  [UserTokenType.REFRESH]: {
-    type: UserTokenType.REFRESH;
-    user: UserEntity;
-    deviceId: string;
-    sessionId: string;
-  };
-  [UserTokenType.TWO_FA]: {
-    type: UserTokenType.TWO_FA;
-    user: UserEntity;
+  [TokenType.TWO_FA]: {
+    type: TokenType.TWO_FA;
+    userId: UserEntity['id'];
     sessionId: string;
   };
 };
 
-export type CreateTokenArgs<T extends UserTokenType> = CreateArgsMap[T];
+export type CreateTokenArgs<T extends PersistentTokenType> = CreateArgsMap[T];
 
 export type ValidateArgsMap = {
-  [UserTokenType.INITIAL_SETUP]: {
-    type: UserTokenType.INITIAL_SETUP;
+  [TokenType.REFRESH]: {
+    type: TokenType.REFRESH;
+    tokenId: number;
+    token: string;
+    deviceId: string;
+  };
+  [TokenType.INITIAL_SETUP]: {
+    type: TokenType.INITIAL_SETUP;
     tokenId: number;
     token: string;
     sessionId?: string;
     skipSessionCheck?: boolean;
   };
-  [UserTokenType.EMAIL_CONFIRMATION]: {
-    type: UserTokenType.EMAIL_CONFIRMATION;
+  [TokenType.EMAIL_CONFIRMATION]: {
+    type: TokenType.EMAIL_CONFIRMATION;
     tokenId: number;
     token: string;
   };
-  [UserTokenType.EMAIL_CHANGE]: {
-    type: UserTokenType.EMAIL_CHANGE;
+  [TokenType.EMAIL_CHANGE]: {
+    type: TokenType.EMAIL_CHANGE;
     tokenId: number;
     token: string;
   };
-  [UserTokenType.PASSWORD_RESET]: {
-    type: UserTokenType.PASSWORD_RESET;
+  [TokenType.PASSWORD_RESET]: {
+    type: TokenType.PASSWORD_RESET;
     tokenId: number;
     token: string;
   };
-  [UserTokenType.REFRESH]: {
-    type: UserTokenType.REFRESH;
-    tokenId: number;
-    token: string;
-    deviceId: string;
-    sessionId: string;
-  };
-  [UserTokenType.TWO_FA]: {
-    type: UserTokenType.TWO_FA;
+  [TokenType.TWO_FA]: {
+    type: TokenType.TWO_FA;
     tokenId: number;
     token: string;
     sessionId: string;
   };
 };
 
-export type ValidateTokenArgs<T extends UserTokenType> = ValidateArgsMap[T];
+export type ValidateTokenArgs<T extends PersistentTokenType> =
+  ValidateArgsMap[T];
 
-export type AnyValidateTokenArgs = ValidateArgsMap[UserTokenType];
+export type AnyValidateTokenArgs = ValidateTokenArgs<PersistentTokenType>;
 
 export type ParsedToken = {
   tokenId: number;

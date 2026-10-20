@@ -1,23 +1,23 @@
 import { Injectable } from '@nestjs/common';
 import { TokenService } from '../tokens.service';
-import { UserTokenType } from '../tokens.types';
+import { TokenType } from '../tokens.types';
 import { UserEntity } from 'src/app/product/profiles/entities/user.entity';
 
 @Injectable()
 export class TwoFactorAuthTokenService {
   constructor(private readonly tokenService: TokenService) {}
 
-  async createTwoFaToken(user: UserEntity, sessionId: string) {
+  async createTwoFaToken(userId: UserEntity['id'], sessionId: string) {
     return this.tokenService.createToken({
-      type: UserTokenType.TWO_FA,
-      user,
+      type: TokenType.TWO_FA,
+      userId,
       sessionId,
     });
   }
 
   async validateTwoFaToken(tokenId: number, token: string, sessionId: string) {
     return this.tokenService.validateToken({
-      type: UserTokenType.TWO_FA,
+      type: TokenType.TWO_FA,
       tokenId,
       token,
       sessionId,

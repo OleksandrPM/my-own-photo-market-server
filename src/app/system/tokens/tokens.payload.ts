@@ -1,75 +1,71 @@
-import { UserEntity } from 'src/app/product/profiles/entities/user.entity';
-import { UserTokenType } from './tokens.types';
+import { TokenType } from './tokens.types';
 
 export type TokenPayloads = {
-  [UserTokenType.INITIAL_SETUP]: {
+  [TokenType.ACCESS]: null;
+  [TokenType.REFRESH]: null;
+  [TokenType.INITIAL_SETUP]: {
     ownerEmail: string;
     isConfirmed: boolean;
   };
-  [UserTokenType.EMAIL_CONFIRMATION]: {
+  [TokenType.EMAIL_CONFIRMATION]: {
     email: string;
   };
-  [UserTokenType.EMAIL_CHANGE]: {
+  [TokenType.EMAIL_CHANGE]: {
     oldEmail: string;
     newEmail: string;
   };
-  [UserTokenType.PASSWORD_RESET]: {
+  [TokenType.PASSWORD_RESET]: {
     email: string;
   };
-  [UserTokenType.REFRESH]: null;
-  [UserTokenType.TWO_FA]: null;
+  [TokenType.TWO_FA]: null;
 };
 
-export type UserTokenPayload = TokenPayloads[UserTokenType];
+export type UserTokenPayload = TokenPayloads[TokenType];
 
 export type TokenPayloadInputs = {
-  [UserTokenType.INITIAL_SETUP]: {
-    user: null;
+  [TokenType.ACCESS]: {};
+  [TokenType.REFRESH]: {};
+  [TokenType.INITIAL_SETUP]: {
     ownerEmail: string;
   };
-  [UserTokenType.EMAIL_CONFIRMATION]: {
-    user: UserEntity;
-  };
-  [UserTokenType.EMAIL_CHANGE]: {
-    user: UserEntity;
-    newEmail: string;
-  };
-  [UserTokenType.PASSWORD_RESET]: {
-    user: UserEntity | null;
+  [TokenType.EMAIL_CONFIRMATION]: {
     email: string;
   };
-  [UserTokenType.REFRESH]: {
-    user: UserEntity;
+  [TokenType.EMAIL_CHANGE]: {
+    oldEmail: string;
+    newEmail: string;
   };
-  [UserTokenType.TWO_FA]: {
-    user: UserEntity;
+  [TokenType.PASSWORD_RESET]: {
+    email: string;
   };
+  [TokenType.TWO_FA]: {};
 };
 
 type PayloadBuilders = {
-  [K in UserTokenType]: (input: TokenPayloadInputs[K]) => TokenPayloads[K];
+  [K in TokenType]: (input: TokenPayloadInputs[K]) => TokenPayloads[K];
 };
 
 export const PAYLOAD_BUILDERS: PayloadBuilders = {
-  [UserTokenType.INITIAL_SETUP]: (i) => ({
-    ownerEmail: i.ownerEmail,
+  [TokenType.ACCESS]: () => null,
+  [TokenType.REFRESH]: () => null,
+  [TokenType.INITIAL_SETUP]: ({ ownerEmail }) => ({
+    ownerEmail,
     isConfirmed: false,
   }),
-  [UserTokenType.EMAIL_CONFIRMATION]: (i) => ({
-    email: i.user.email,
+  [TokenType.EMAIL_CONFIRMATION]: ({ email }) => ({
+    email,
   }),
-  [UserTokenType.EMAIL_CHANGE]: (i) => ({
-    oldEmail: i.user.email,
-    newEmail: i.newEmail,
+  [TokenType.EMAIL_CHANGE]: ({ oldEmail, newEmail }) => ({
+    oldEmail,
+    newEmail,
   }),
-  [UserTokenType.PASSWORD_RESET]: (i) => ({
-    email: i.email ?? i.user?.email ?? '',
+  [TokenType.PASSWORD_RESET]: ({ email }) => ({
+    email,
   }),
-  [UserTokenType.REFRESH]: (_i) => null,
-  [UserTokenType.TWO_FA]: (_i) => null,
+  [TokenType.TWO_FA]: () => null,
 };
 
-export function buildTokenPayload<T extends UserTokenType>(
+export function buildTokenPayload<T extends TokenType>(
   type: T,
   input: TokenPayloadInputs[T],
 ): TokenPayloads[T] {

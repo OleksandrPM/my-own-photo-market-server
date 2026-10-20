@@ -9,7 +9,7 @@ import { PasswordResetTokenService } from './handlers/password-reset-token.servi
 import { TwoFactorAuthTokenService } from './handlers/two-factor-token.service';
 import { AccessTokenService } from './handlers/access-token.service';
 import { CsrfTokenService } from './handlers/csrf-token.service';
-import { UserTokenType } from './tokens.types';
+import { PersistentTokenType } from './tokens.types';
 
 @Injectable()
 export class TokenManagerService {
@@ -30,22 +30,22 @@ export class TokenManagerService {
     return this.tokenService.revokeTokenById(id);
   }
 
-  async revokeTokensByType(tokenType: UserTokenType, date = new Date()) {
+  async revokeTokensByType(tokenType: PersistentTokenType, date = new Date()) {
     return this.tokenService.revokeTokensByType(tokenType, date);
   }
 
   // CSRF token methods
-  generateCsrfToken(bindingValue: string): string {
-    return this.csrfTokenService.generateCsrfToken(bindingValue);
+  generateCsrfToken(deviceId: string): string {
+    return this.csrfTokenService.generateCsrfToken(deviceId);
   }
 
-  validateCsrfToken(token: string, bindingValue: string): boolean {
-    return this.csrfTokenService.validateCsrfToken(token, bindingValue);
+  validateCsrfToken(token: string, deviceId: string): boolean {
+    return this.csrfTokenService.validateCsrfToken(token, deviceId);
   }
 
   // Access token methods
-  generateAccessToken(user: UserEntity): string {
-    return this.accessTokenService.generateAccessToken(user);
+  generateAccessToken(userId: UserEntity['id']): string {
+    return this.accessTokenService.generateAccessToken(userId);
   }
 
   // Setup token methods
@@ -74,35 +74,21 @@ export class TokenManagerService {
   }
 
   // Refresh token methods
-  async createRefreshToken(
-    user: UserEntity,
-    deviceId: string,
-    sessionId: string,
-  ) {
-    return this.refreshTokenService.createRefreshToken(
-      user,
-      deviceId,
-      sessionId,
-    );
+  async createRefreshToken(userId: UserEntity['id'], deviceId: string) {
+    return this.refreshTokenService.createRefreshToken(userId, deviceId);
   }
 
-  async validateRefreshToken(
-    tokenId: number,
-    token: string,
-    deviceId: string,
-    sessionId: string,
-  ) {
+  async validateRefreshToken(tokenId: number, token: string, deviceId: string) {
     return this.refreshTokenService.validateRefreshToken(
       tokenId,
       token,
       deviceId,
-      sessionId,
     );
   }
 
   // Email confirmation token methods
-  async createEmailConfirmationToken(user: UserEntity) {
-    return this.emailConfirmTokenService.createEmailConfirmationToken(user);
+  async createEmailConfirmationToken(userId: UserEntity['id']) {
+    return this.emailConfirmTokenService.createEmailConfirmationToken(userId);
   }
 
   async validateEmailConfirmationToken(tokenId: number, token: string) {
@@ -113,8 +99,11 @@ export class TokenManagerService {
   }
 
   // Email change token methods
-  async createEmailChangeToken(user: UserEntity, newEmail: string) {
-    return this.emailChangeTokenService.createEmailChangeToken(user, newEmail);
+  async createEmailChangeToken(userId: UserEntity['id'], newEmail: string) {
+    return this.emailChangeTokenService.createEmailChangeToken(
+      userId,
+      newEmail,
+    );
   }
 
   async validateEmailChangeToken(tokenId: number, token: string) {
@@ -125,8 +114,11 @@ export class TokenManagerService {
   }
 
   // Password reset token methods
-  async createPasswordResetToken(user: UserEntity, email: string) {
-    return this.passwordResetTokenService.createPasswordResetToken(user, email);
+  async createPasswordResetToken(userId: UserEntity['id'], email: string) {
+    return this.passwordResetTokenService.createPasswordResetToken(
+      userId,
+      email,
+    );
   }
 
   async validatePasswordResetToken(tokenId: number, token: string) {
@@ -137,8 +129,8 @@ export class TokenManagerService {
   }
 
   // Two-factor auth token methods
-  async createTwoFaToken(user: UserEntity, sessionId: string) {
-    return this.twoFactorAuthTokenService.createTwoFaToken(user, sessionId);
+  async createTwoFaToken(userId: UserEntity['id'], sessionId: string) {
+    return this.twoFactorAuthTokenService.createTwoFaToken(userId, sessionId);
   }
 
   async validateTwoFaToken(tokenId: number, token: string, sessionId: string) {
