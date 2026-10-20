@@ -1,5 +1,11 @@
 import { Module } from '@nestjs/common';
-import { CookieService } from './cookie.service';
+import { CookiesService } from './cookies.service';
+import { PathBuilderModule } from 'src/app/common/path-builder/path-builder.module';
+import { CookiesConfigService } from './cookies-config.service';
 
-@Module({ providers: [CookieService], exports: [CookieService] })
+@Module({
+  imports: [PathBuilderModule],
+  providers: [CookiesConfigService, CookiesService],
+  exports: [CookiesService],
+})
 export class CookiesModule {}
