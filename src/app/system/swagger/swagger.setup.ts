@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { SwaggerModule } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import { swaggerConfig } from './swagger.config';
-import { apiRoutes } from '../../common/path-builder/api.routes';
+import { apiRoutes } from '../../common/api/api.routes';
 
 export function setupSwagger(app: INestApplication) {
   const configService = app.get(ConfigService);
