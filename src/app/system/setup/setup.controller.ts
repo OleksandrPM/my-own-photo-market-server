@@ -11,12 +11,12 @@ import {
 import { SetupService } from './setup.service';
 import { SetupEnabledGuard } from './guards/setup-enabled.guard';
 import { SetupAdminDto } from './dto/setup-admin.dto';
-import { apiRoutes } from 'src/app/common/path-builder/api.routes';
+import { apiRoutes } from 'src/app/common/api/api.routes';
 import { SetupVerifyEmailDto } from './dto/setup-verify-email.dto';
-import { CookieService } from '../cookies/cookie.service';
+import { CookieService } from '../cookie/cookie.service';
 import type { Request, Response } from 'express';
 import { SetupIsEnabledResponseDto } from './dto/setup-is-enabled-response.dto';
-import { CookieName } from '../cookies/cookies.types';
+import { CookieName } from '../cookie/cookie.types';
 import { ApiBody, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { SetupStatusResponseDto } from './dto/setup-status-response.dto';
 import { SetupCreatedminResponseDto } from './dto/setup-create-admin-response.dto';
@@ -64,7 +64,7 @@ export class SetupController {
     const { message, sessionId } =
       await this.setupService.verifyOwnerEmail(dto);
 
-    this.cookieService.setSetupSessionCookie(res, sessionId);
+    this.cookieService.setCookie(res, CookieName.SETUP_SESSION_ID, sessionId);
 
     return { message };
   }

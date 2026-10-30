@@ -6,9 +6,9 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { Reflector } from '@nestjs/core';
-import { CookiesService } from 'src/app/system/cookies/cookies.service';
+import { CookieService } from 'src/app/system/cookie/cookie.service';
 import { TokenManagerService } from 'src/app/system/tokens/tokens-manager.service';
-import { CookieName } from 'src/app/system/cookies/cookies.types';
+import { CookieName } from 'src/app/system/cookie/cookie.types';
 import { ERROR_CODES } from 'src/types/error.types';
 import { SKIP_CSRF_KEY } from '../decorators/skip-csrf.decorator';
 
@@ -17,7 +17,7 @@ export class CsrfGuard implements CanActivate {
   constructor(
     private readonly tokenService: TokenManagerService,
     private readonly reflector: Reflector,
-    private readonly cookieService: CookiesService,
+    private readonly cookieService: CookieService,
   ) {}
 
   private isSafeMethod(method: string): boolean {

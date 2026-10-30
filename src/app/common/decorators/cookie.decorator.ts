@@ -4,7 +4,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Request } from 'express';
-import { CookieName } from 'src/app/system/cookies/cookies.types';
+import { CookieName } from 'src/app/system/cookie/cookie.types';
 
 export const Cookie = createParamDecorator(
   (cookieName: CookieName, context: ExecutionContext): string => {

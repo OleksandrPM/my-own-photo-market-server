@@ -1,17 +1,17 @@
 import { Response } from 'express';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { CookieName, CookieOptions } from './cookies.types';
-import { CookiesConfigService } from './cookies-config.service';
+import { CookieName, CookieOptions } from './cookie.types';
+import { CookieConfigService } from './cookie-config.service';
 
 @Injectable()
-export class CookiesService {
+export class CookieService {
   private readonly isLocalhost: boolean;
   private readonly isHttps: boolean;
 
   constructor(
     private readonly config: ConfigService,
-    private readonly cookieConfig: CookiesConfigService,
+    private readonly cookieConfig: CookieConfigService,
   ) {
     const origin = this.config.get<string>('ORIGIN_URL');
 
@@ -60,7 +60,7 @@ export class CookiesService {
 
     res.clearCookie(name, {
       ...base,
-      path: config.path,
+      ...config,
     });
   }
 }

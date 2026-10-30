@@ -10,7 +10,7 @@ import { OriginGuard } from './common/guards/origin.guard';
 import { PathBuilderModule } from './common/api/path-builder/path-builder.module';
 import { InitCookiesMiddleware } from './common/middlewares/init-cookies.middleware';
 import { TokenModule } from './system/tokens/tokens.module';
-import { CookiesModule } from './system/cookies/cookies.module';
+import { CookieModule } from './system/cookie/cookie.module';
 import { CsrfGuard } from './common/guards/csrf.guard';
 import { join } from 'path/win32';
 
@@ -24,7 +24,7 @@ import { join } from 'path/win32';
     ApiModule,
     PathBuilderModule,
     TokenModule,
-    CookiesModule,
+    CookieModule,
   ],
   controllers: [AppController],
   providers: [

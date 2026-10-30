@@ -1,11 +1,11 @@
 import { toMs } from 'src/app/common/utils/time.utils';
-import { CookieName, CookiesConfigMap } from './cookies.types';
+import { CookieName, CookiesConfigMap } from './cookie.types';
 import { Injectable } from '@nestjs/common';
-import { PathBuilderService } from 'src/app/common/path-builder/path-builder.service';
-import { apiRoutes } from 'src/app/common/path-builder/api.routes';
+import { PathBuilderService } from 'src/app/common/api/path-builder/path-builder.service';
+import { apiRoutes } from 'src/app/common/api/api.routes';
 
 @Injectable()
-export class CookiesConfigService {
+export class CookieConfigService {
   private readonly config: CookiesConfigMap;
 
   constructor(private readonly pathBuilder: PathBuilderService) {
@@ -18,10 +18,7 @@ export class CookiesConfigService {
 
       [CookieName.REFRESH_TOKEN]: {
         httpOnly: true,
-        path: this.pathBuilder.getApiPath(
-          apiRoutes.AUTH.BASE,
-          apiRoutes.AUTH.REFRESH,
-        ),
+        path: this.pathBuilder.getApiPath(apiRoutes.AUTH.BASE),
         maxAge: toMs.days(30),
       },
 

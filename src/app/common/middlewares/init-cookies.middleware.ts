@@ -1,15 +1,15 @@
 import { Injectable, NestMiddleware } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 import { randomUUID } from 'crypto';
-import { CookiesService } from 'src/app/system/cookies/cookies.service';
+import { CookieService } from 'src/app/system/cookie/cookie.service';
 import { TokenManagerService } from 'src/app/system/tokens/tokens-manager.service';
-import { CookieName } from 'src/app/system/cookies/cookies.types';
+import { CookieName } from 'src/app/system/cookie/cookie.types';
 
 @Injectable()
 export class InitCookiesMiddleware implements NestMiddleware {
   constructor(
     private readonly tokenService: TokenManagerService,
-    private readonly cookieService: CookiesService,
+    private readonly cookieService: CookieService,
   ) {}
 
   use(req: Request, res: Response, next: NextFunction) {

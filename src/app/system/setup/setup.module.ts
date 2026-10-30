@@ -2,12 +2,12 @@ import { Module } from '@nestjs/common';
 import { SetupController } from './setup.controller';
 import { SetupService } from './setup.service';
 import { TokenModule } from '../tokens/tokens.module';
-import { CookiesModule } from '../cookies/cookies.module';
-import { EmailModule } from '../communications/email/email.module';
+import { CookieModule } from '../cookie/cookie.module';
+import { EmailModule } from '../communication/email/email.module';
 import { ProfileModule } from 'src/app/product/profile/profile.module';
 
 @Module({
-  imports: [ProfileModule, TokenModule, EmailModule, CookiesModule],
+  imports: [ProfileModule, TokenModule, EmailModule, CookieModule],
   controllers: [SetupController],
   providers: [SetupService],
 })
