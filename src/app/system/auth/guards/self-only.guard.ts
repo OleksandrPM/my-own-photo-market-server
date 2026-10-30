@@ -1,30 +1,32 @@
 import {
+  BadRequestException,
   CanActivate,
   ExecutionContext,
   ForbiddenException,
   Injectable,
+  UnauthorizedException,
 } from '@nestjs/common';
-import { AuthenticatedRequest } from 'src/types/authenticated-request.types';
+import { Request } from 'express';
 
 @Injectable()
 export class SelfOnlyGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
-    const req = context.switchToHttp().getRequest<AuthenticatedRequest>();
+    const req = context.switchToHttp().getRequest<Request>();
 
     // Check if the user is authenticated
     if (!req.user) {
-      throw new ForbiddenException('Authentication required');
+      throw new UnauthorizedException('Authentication required');
     }
-
-    const userId = req.user.id;
 
     const targetId = req.params.id ?? req.body.id ?? req.query.id;
 
+    // Check if the target ID is provided and matches the authenticated user's ID
     if (!targetId) {
-      throw new ForbiddenException('Target user ID missing');
+      throw new BadRequestException('Target user ID missing');
     }
 
-    if (String(targetId) !== String(userId)) {
+    // Check if the authenticated user is trying to access their own data
+    if (String(targetId) !== String(req.user.id)) {
       throw new ForbiddenException('You can only access your own data');
     }
 
