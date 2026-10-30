@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { IsNull, Raw, Repository } from 'typeorm';
 import { DbConnectionName } from '../database.config';
 import { TokenOrmEntity } from './token.orm-entity';
-import { UserTokenPayload } from 'src/app/system/tokens/tokens.payload';
+import { TokenPayload } from 'src/app/system/tokens/tokens.payload';
 import {
   TokenFindManyOptions,
   TokenFindOneOptions,
@@ -79,22 +79,19 @@ export class TokensRepository {
     return this.editor.update(where, patch);
   }
 
-  updatePayloadById(id: number, payload: UserTokenPayload | null) {
+  updatePayloadById(id: number, payload: TokenPayload | null) {
     return this.editor.update({ id }, { payload });
   }
 
-  updatePayloadWhere(where: TokenWhere, payload: UserTokenPayload | null) {
+  updatePayloadWhere(where: TokenWhere, payload: TokenPayload | null) {
     return this.editor.update(where, { payload });
   }
 
-  updateActivePayloadById(id: number, payload: UserTokenPayload | null) {
+  updateActivePayloadById(id: number, payload: TokenPayload | null) {
     return this.editor.update({ id, revokedAt: IsNull() }, { payload });
   }
 
-  updateActivePayloadWhere(
-    where: TokenWhere,
-    payload: UserTokenPayload | null,
-  ) {
+  updateActivePayloadWhere(where: TokenWhere, payload: TokenPayload | null) {
     return this.editor.update({ ...where, revokedAt: IsNull() }, { payload });
   }
 
