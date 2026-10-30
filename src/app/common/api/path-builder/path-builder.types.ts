@@ -1,4 +1,4 @@
-import { apiRoutes } from './api.routes';
+import { apiRoutes } from '../api.routes';
 
 export type NestedValues<T> = T extends string
   ? T

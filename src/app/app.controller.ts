@@ -1,6 +1,6 @@
 import { Controller, Get, Render } from '@nestjs/common';
-import { PathBuilderService } from './common/path-builder/path-builder.service';
-import { apiRoutes } from './common/path-builder/api.routes';
+import { PathBuilderService } from './common/api/path-builder/path-builder.service';
+import { apiRoutes } from './common/api/api.routes';
 
 @Controller()
 export class AppController {

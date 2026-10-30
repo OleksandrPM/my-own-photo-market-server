@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { PathBuilderService } from 'src/app/common/path-builder/path-builder.service';
-import { apiRoutes } from 'src/app/common/path-builder/api.routes';
+import { PathBuilderService } from 'src/app/common/api/path-builder/path-builder.service';
+import { apiRoutes } from 'src/app/common/api/api.routes';
 import { EmailService } from '../email.service';
 import { buildEmailVerificationTemplate } from '../templates';
 import { EmailSubject } from '../email.types';
 import { calculateMinutesUntil } from 'src/app/common/utils';
-import { UserEntity } from 'src/app/product/profiles/entities/user.entity';
+import { ProfileEntity } from 'src/app/product/profile/entities/profile.entity';
 
 @Injectable()
 export class EmailVerificationService {
@@ -15,7 +15,7 @@ export class EmailVerificationService {
   ) {}
 
   async sendConfirmationEmail(
-    user: UserEntity,
+    user: ProfileEntity,
     rawToken: string,
     expiresAt: Date,
   ): Promise<void> {

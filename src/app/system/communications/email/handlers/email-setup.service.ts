@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { PathBuilderService } from 'src/app/common/path-builder/path-builder.service';
+import { PathBuilderService } from 'src/app/common/api/path-builder/path-builder.service';
 import { EmailService } from '../email.service';
-import { apiRoutes } from 'src/app/common/path-builder/api.routes';
+import { apiRoutes } from 'src/app/common/api/api.routes';
 import { calculateMinutesUntil } from 'src/app/common/utils';
 import { EmailSubject } from '../email.types';
 

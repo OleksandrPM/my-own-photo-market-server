@@ -7,7 +7,7 @@ import { ApiModule } from './api/api.module';
 import { AppController } from './app.controller';
 import { RolesGuard } from './system/auth/guards/roles.guard';
 import { OriginGuard } from './common/guards/origin.guard';
-import { PathBuilderModule } from './common/path-builder/path-builder.module';
+import { PathBuilderModule } from './common/api/path-builder/path-builder.module';
 import { InitCookiesMiddleware } from './common/middlewares/init-cookies.middleware';
 import { TokenModule } from './system/tokens/tokens.module';
 import { CookiesModule } from './system/cookies/cookies.module';

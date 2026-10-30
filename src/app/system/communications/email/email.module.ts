@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { PathBuilderModule } from 'src/app/common/path-builder/path-builder.module';
+import { PathBuilderModule } from 'src/app/common/api/path-builder/path-builder.module';
 import { EmailService } from './email.service';
 import { EmailVerificationService } from './handlers/email-verification.service';
 import { EmailSetupService } from './handlers/email-setup.service';

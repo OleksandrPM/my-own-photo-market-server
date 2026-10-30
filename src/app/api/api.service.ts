@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { apiRoutes } from '../common/path-builder/api.routes';
+import { apiRoutes } from '../common/api/api.routes';
 import { toCamelCase } from '../common/utils/string.utils';
-import { PathBuilderService } from '../common/path-builder/path-builder.service';
+import { PathBuilderService } from '../common/api/path-builder/path-builder.service';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
