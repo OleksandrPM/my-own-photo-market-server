@@ -82,25 +82,25 @@ export class R2Service {
   }
 
   async getObject(key: string) {
-    const res = await this.client.send(
-      new GetObjectCommand({
-        Bucket: this.bucket,
-        Key: key,
-      }),
-    );
+    try {
+      const res = await this.client.send(
+        new GetObjectCommand({
+          Bucket: this.bucket,
+          Key: key,
+        }),
+      );
 
-    if (!res.Body) {
+      return {
+        stream: res.Body as NodeJS.ReadableStream,
+        contentType: res.ContentType,
+        contentLength: res.ContentLength,
+      };
+    } catch (error) {
       throw new NotFoundException({
         code: ERROR_CODES.NOT_FOUND,
         message: 'Object not found',
       });
     }
-
-    return {
-      stream: res.Body as NodeJS.ReadableStream,
-      contentType: res.ContentType,
-      contentLength: res.ContentLength,
-    };
   }
 
   async deleteObject(key: string): Promise<string> {

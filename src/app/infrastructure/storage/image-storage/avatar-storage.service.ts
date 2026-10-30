@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { R2Service } from '../r2/r2.service';
 import { ImageProcessingService } from '../../image-processing/image-processing.service';
-import { IMAGE_PRESETS } from '../../image-processing/image-preset.interface';
 import { buildAvatarKey } from './image-storage.utils';
-import { ImageMime } from '../../image-processing/image-processing.constants';
+import { IMAGE_PRESETS } from '../../image-processing/image-processing.constants';
+import { ImageMime } from '../../image-processing/image-processing.types';
 
 @Injectable()
 export class AvatarStorageService {
@@ -12,14 +12,8 @@ export class AvatarStorageService {
     private readonly imageProcessing: ImageProcessingService,
   ) {}
 
-  async getAvatarUrlByUserId(userId: number): Promise<string> {
-    const key = buildAvatarKey(userId);
-
-    return this.r2.createSignedUrl(key, 3600); // URL valid for 1 hour
-  }
-
-  async getAvatarUrlByKey(avatarKey: string): Promise<string> {
-    return this.r2.createSignedUrl(avatarKey, 3600); // URL valid for 1 hour
+  async getAvatarUrl(userId: number): Promise<string> {
+    return this.r2.createSignedUrl(buildAvatarKey(userId), 3600);
   }
 
   async uploadAvatar(
@@ -31,18 +25,14 @@ export class AvatarStorageService {
       IMAGE_PRESETS.avatar,
     );
 
-    const key = buildAvatarKey(userId);
-
-    return this.r2.uploadObject(key, resized, ImageMime.WEBP);
+    return this.r2.uploadObject(
+      buildAvatarKey(userId),
+      resized,
+      ImageMime.WEBP,
+    );
   }
 
-  async deleteAvatarByUserId(userId: number): Promise<string> {
-    const key = buildAvatarKey(userId);
-
-    return this.r2.deleteObject(key);
-  }
-
-  async deleteAvatarByKey(avatarKey: string): Promise<string> {
-    return this.r2.deleteObject(avatarKey);
+  async deleteAvatar(userId: number): Promise<void> {
+    await this.r2.deleteObject(buildAvatarKey(userId));
   }
 }

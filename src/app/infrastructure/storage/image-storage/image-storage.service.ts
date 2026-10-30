@@ -1,17 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { R2Service } from '../r2/r2.service';
 import { ImageProcessingService } from '../../image-processing/image-processing.service';
-import { IMAGE_PRESETS } from '../../image-processing/image-preset.interface';
 import {
-  buildOriginalKey,
-  buildPreviewKey,
+  buildGalleryKey,
+  buildPublicKey,
+  buildSourceKey,
   buildThumbKey,
 } from './image-storage.utils';
 import {
-  ImageExtension,
-  ImageMime,
+  IMAGE_PRESETS,
+  MIME_TO_FORMAT,
 } from '../../image-processing/image-processing.constants';
-import { getImageExtension } from '../../image-processing/image-processing.utils';
+import { ImageFormat } from 'src/app/product/image/image.types';
+import { ImageMime } from '../../image-processing/image-processing.types';
 
 @Injectable()
 export class ImageStorageService {
@@ -20,77 +21,96 @@ export class ImageStorageService {
     private readonly imageProcessing: ImageProcessingService,
   ) {}
 
-  // TODO: Check what the file originalname can be and refactor key building
-  async uploadOriginalImage(image: Express.Multer.File) {
-    const originalName = image.originalname;
+  // Source image
+  async uploadSourceImage(imageId: string, image: Express.Multer.File) {
     const imageMimeType = image.mimetype as ImageMime;
-    const imageExtension = getImageExtension(imageMimeType);
 
-    const key = buildOriginalKey(originalName, imageExtension);
+    const key = buildSourceKey(imageId, MIME_TO_FORMAT[imageMimeType]);
     await this.r2.uploadObject(key, image.buffer, image.mimetype);
 
     return key;
   }
 
-  async deleteOriginalImage(imageName: string, imageExtension: ImageExtension) {
-    const key = buildOriginalKey(imageName, imageExtension);
+  async deleteSourceImage(imageId: string, imageFormat: ImageFormat) {
+    const key = buildSourceKey(imageId, imageFormat);
     await this.r2.deleteObject(key);
   }
 
-  async uploadPreviewImage(image: Express.Multer.File) {
+  // Public image
+  async uploadPublicImage(imageId: string, image: Express.Multer.File) {
     const resized = await this.imageProcessing.process(
       image.buffer,
-      IMAGE_PRESETS.preview,
+      IMAGE_PRESETS.public,
     );
 
-    const key = buildPreviewKey(image.originalname);
+    const key = buildPublicKey(imageId);
     // TODO: Change string to actual content type of resized image
     await this.r2.uploadObject(key, resized, ImageMime.WEBP);
 
     return key;
   }
 
-  async deletePreviewImage(imageName: string) {
-    const key = buildPreviewKey(imageName);
+  async deletePublicImage(imageId: string) {
+    const key = buildPublicKey(imageId);
     await this.r2.deleteObject(key);
   }
 
-  async uploadThumbImage(file: Express.Multer.File) {
+  // Gallery image
+  async uploadGalleryImage(imageId: string, file: Express.Multer.File) {
     const resized = await this.imageProcessing.process(
       file.buffer,
-      IMAGE_PRESETS.thumb,
+      IMAGE_PRESETS.gallery,
     );
-    const key = buildThumbKey(file.originalname);
+    const key = buildGalleryKey(imageId);
     await this.r2.uploadObject(key, resized, ImageMime.WEBP);
     return key;
   }
 
-  async deleteThumbImage(imageName: string) {
-    const key = buildThumbKey(imageName);
+  async deleteGalleryImage(imageId: string) {
+    const key = buildGalleryKey(imageId);
     await this.r2.deleteObject(key);
   }
 
-  async uploadImage(image: Express.Multer.File) {
-    const [originalKey, previewKey, thumbKey] = await Promise.all([
-      this.uploadOriginalImage(image),
-      this.uploadPreviewImage(image),
-      this.uploadThumbImage(image),
+  // Thumb image
+  async uploadThumbImage(imageId: string, file: Express.Multer.File) {
+    const resized = await this.imageProcessing.process(
+      file.buffer,
+      IMAGE_PRESETS.thumb,
+    );
+    const key = buildThumbKey(imageId);
+    await this.r2.uploadObject(key, resized, ImageMime.WEBP);
+    return key;
+  }
+
+  async deleteThumbImage(imageId: string) {
+    const key = buildThumbKey(imageId);
+    await this.r2.deleteObject(key);
+  }
+
+  async uploadImage(imageId: string, image: Express.Multer.File) {
+    const [sourceKey, publicKey, galleryKey, thumbKey] = await Promise.all([
+      this.uploadSourceImage(imageId, image),
+      this.uploadPublicImage(imageId, image),
+      this.uploadGalleryImage(imageId, image),
+      this.uploadThumbImage(imageId, image),
     ]);
 
     return {
-      originalKey,
-      previewKey,
+      sourceKey,
+      publicKey,
+      galleryKey,
       thumbKey,
     };
   }
 
-  async deleteImage(imageName: string, imageExtension: ImageExtension) {
+  async deleteImage(imageId: string, imageFormat: ImageFormat) {
     await Promise.all([
-      this.deleteOriginalImage(imageName, imageExtension),
-      this.deletePreviewImage(imageName),
-      this.deleteThumbImage(imageName),
+      this.deleteSourceImage(imageId, imageFormat),
+      this.deletePublicImage(imageId),
+      this.deleteGalleryImage(imageId),
+      this.deleteThumbImage(imageId),
     ]);
 
-    return imageName;
+    return imageId;
   }
 }
