@@ -1,15 +1,14 @@
 import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SetupAdminDto } from './dto/setup-admin.dto';
-import { ProfilesService } from '../../product/profiles/profiles.service';
+import { ProfilesService } from '../../product/profile/profile.service';
 import { SetupVerifyEmailDto } from './dto/setup-verify-email.dto';
 import { SetupIsEnabledResponseDto } from './dto/setup-is-enabled-response.dto';
 import { TokenManagerService } from '../tokens/tokens-manager.service';
-import { EmailManagerService } from '../communications/email/email-manager.service';
+import { EmailManagerService } from '../communication/email/email-manager.service';
 import { SetupStatusResponseDto } from './dto/setup-status-response.dto';
 import { SetupCreatedminResponseDto } from './dto/setup-create-admin-response.dto';
-import { decodeToken, encodeToken } from '../tokens/tokens.utils';
-import { TypedUserToken, UserTokenType } from '../tokens/tokens.types';
+import { TypedToken, TokenType } from '../tokens/tokens.types';
 import { randomUUID, UUID } from 'crypto';
 
 @Injectable()
@@ -40,7 +39,7 @@ export class SetupService {
     }
 
     // revoke all previous setup tokens
-    await this.tokenService.revokeTokensByType(UserTokenType.INITIAL_SETUP);
+    await this.tokenService.revokeTokensByType(TokenType.INITIAL_SETUP);
 
     const response = {
       message: `Check your email ${email}`,
@@ -53,15 +52,13 @@ export class SetupService {
       return response;
     }
 
-    const { id, rawToken, expiresAt } =
+    const { encodedToken, tokenRecord } =
       await this.tokenService.createSetupToken(ownerEmail, response.sessionId);
-
-    const encodedToken = encodeToken(id, rawToken);
 
     await this.emailService.sendSetupConfirmationEmail(
       ownerEmail,
       encodedToken,
-      expiresAt,
+      tokenRecord.expiresAt,
     );
 
     return response;
@@ -70,12 +67,8 @@ export class SetupService {
   async confirmOwnerEmail(
     encodedToken: string,
   ): Promise<{ isConfirmed: boolean }> {
-    const { tokenId, rawToken } = decodeToken(encodedToken);
-
-    const tokenRecord = await this.tokenService.validateSetupTokenFromEmail(
-      tokenId,
-      rawToken,
-    );
+    const tokenRecord =
+      await this.tokenService.validateSetupTokenFromEmail(encodedToken);
 
     if (!tokenRecord.payload) {
       throw new UnauthorizedException('Setup token has no payload');
@@ -98,10 +91,10 @@ export class SetupService {
   }
 
   async createInitialAdmin(
-    { password }: SetupAdminDto,
+    { email, password }: SetupAdminDto,
     sessionId: string,
   ): Promise<SetupCreatedminResponseDto> {
-    const tokenRecord: TypedUserToken<UserTokenType.INITIAL_SETUP> | null =
+    const tokenRecord: TypedToken<TokenType.INITIAL_SETUP> | null =
       await this.tokenService.getSetupTokenBySessionId(sessionId);
 
     if (!tokenRecord) {
