@@ -1,6 +1,6 @@
 import * as crypto from 'crypto';
 import * as argon2 from 'argon2';
-import { ParsedToken } from './tokens.types';
+import { ParsedToken } from './token.types';
 
 export function generateRandomToken(): string {
   return crypto.randomBytes(32).toString('hex');

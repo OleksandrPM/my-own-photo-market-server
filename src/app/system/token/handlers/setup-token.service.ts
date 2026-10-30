@@ -4,10 +4,10 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { TokenService } from '../tokens.service';
-import { TypedToken, TokenType } from '../tokens.types';
+import { TokenService } from '../token.service';
+import { TypedToken, TokenType } from '../token.types';
 import { TokensRepository } from 'src/app/infrastructure/data/database/tokens/tokens.repository';
-import { asTypedToken } from '../tokens.guards';
+import { asTypedToken } from '../token.guards';
 
 @Injectable()
 export class SetupTokenService {

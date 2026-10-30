@@ -1,6 +1,6 @@
 import { TokenOrmEntity } from 'src/app/infrastructure/data/database/tokens/token.orm-entity';
 import { ProfileEntity } from 'src/app/product/profile/entities/profile.entity';
-import { TokenPayloads } from './tokens.payload';
+import { TokenPayloads } from './token.payload';
 
 export enum TokenType {
   ACCESS = 'access',

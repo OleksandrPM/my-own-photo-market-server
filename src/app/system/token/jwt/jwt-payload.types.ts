@@ -1,4 +1,4 @@
-import { TokenType } from '../tokens.types';
+import { TokenType } from '../token.types';
 
 export type AccessJwtPayload = {
   sub: number;

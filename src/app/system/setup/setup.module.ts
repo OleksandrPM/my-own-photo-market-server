@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { SetupController } from './setup.controller';
 import { SetupService } from './setup.service';
-import { TokenModule } from '../tokens/tokens.module';
+import { TokenModule } from '../token/token.module';
 import { CookieModule } from '../cookie/cookie.module';
 import { EmailModule } from '../communication/email/email.module';
 import { ProfileModule } from 'src/app/product/profile/profile.module';

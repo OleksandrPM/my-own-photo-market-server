@@ -1,4 +1,4 @@
-import { TokenType } from './tokens.types';
+import { TokenType } from './token.types';
 
 export type TokenPayloads = {
   [TokenType.ACCESS]: null;
@@ -65,6 +65,7 @@ export const PAYLOAD_BUILDERS: PayloadBuilders = {
   [TokenType.TWO_FA]: () => null,
 };
 
+// TODO: Move to the Token service as a private? method
 export function buildTokenPayload<T extends TokenType>(
   type: T,
   input: TokenPayloadInputs[T],

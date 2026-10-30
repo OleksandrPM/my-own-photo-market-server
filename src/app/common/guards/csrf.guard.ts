@@ -7,7 +7,7 @@ import {
 import { Request, Response } from 'express';
 import { Reflector } from '@nestjs/core';
 import { CookieService } from 'src/app/system/cookie/cookie.service';
-import { TokenManagerService } from 'src/app/system/tokens/tokens-manager.service';
+import { TokenManagerService } from 'src/app/system/token/token-manager.service';
 import { CookieName } from 'src/app/system/cookie/cookie.types';
 import { ERROR_CODES } from 'src/types/error.types';
 import { SKIP_CSRF_KEY } from '../decorators/skip-csrf.decorator';

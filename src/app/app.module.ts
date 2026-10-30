@@ -9,7 +9,7 @@ import { RolesGuard } from './system/auth/guards/roles.guard';
 import { OriginGuard } from './common/guards/origin.guard';
 import { PathBuilderModule } from './common/api/path-builder/path-builder.module';
 import { InitCookiesMiddleware } from './common/middlewares/init-cookies.middleware';
-import { TokenModule } from './system/tokens/tokens.module';
+import { TokenModule } from './system/token/token.module';
 import { CookieModule } from './system/cookie/cookie.module';
 import { CsrfGuard } from './common/guards/csrf.guard';
 import { join } from 'path/win32';

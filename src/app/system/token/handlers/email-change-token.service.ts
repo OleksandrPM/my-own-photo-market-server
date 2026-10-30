@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { TokenService } from '../tokens.service';
-import { TokenType } from '../tokens.types';
+import { TokenService } from '../token.service';
+import { TokenType } from '../token.types';
 import { ProfileEntity } from 'src/app/product/profile/entities/profile.entity';
 
 @Injectable()

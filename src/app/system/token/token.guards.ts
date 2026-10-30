@@ -1,5 +1,5 @@
 import { TokenOrmEntity } from 'src/app/infrastructure/data/database/tokens/token.orm-entity';
-import { TypedToken, PersistentTokenType } from './tokens.types';
+import { TypedToken, PersistentTokenType } from './token.types';
 
 export function isTypedToken<T extends PersistentTokenType>(
   token: TokenOrmEntity,

@@ -3,8 +3,8 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ConfigService } from '@nestjs/config';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ProfilesService } from 'src/app/product/profile/profile.service';
-import { AccessJwtPayload } from '../../tokens/jwt/jwt-payload.types';
-import { TokenType } from '../../tokens/tokens.types';
+import { AccessJwtPayload } from '../../token/jwt/jwt-payload.types';
+import { TokenType } from '../../token/token.types';
 import { AuthenticatedUser } from '../auth.types';
 
 @Injectable()

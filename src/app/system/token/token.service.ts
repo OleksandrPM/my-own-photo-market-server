@@ -8,20 +8,20 @@ import {
   PersistentTokenType,
   ValidateTokenArgs,
   ValidatedToken,
-} from './tokens.types';
-import { buildTokenPayload, TokenPayload } from './tokens.payload';
+} from './token.types';
+import { buildTokenPayload, TokenPayload } from './token.payload';
 import {
   decodeToken,
   encodeToken,
   generateRandomToken,
   hashToken,
   verifyTokenHash,
-} from './tokens.utils';
+} from './token.utils';
 
 import { TokensRepository } from 'src/app/infrastructure/data/database/tokens/tokens.repository';
 import { TokenWhere } from 'src/app/infrastructure/data/database/tokens/tokens-data.types';
 import { TokenOrmEntity } from 'src/app/infrastructure/data/database/tokens/token.orm-entity';
-import { TOKEN_CONFIG } from './tokens.config';
+import { TOKEN_CONFIG } from './token.config';
 
 @Injectable()
 export class TokenService {

@@ -2,8 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { AccessJwtPayload } from './jwt-payload.types';
-import { TokenType } from '../tokens.types';
-import { TOKEN_CONFIG } from '../tokens.config';
+import { TokenType } from '../token.types';
+import { TOKEN_CONFIG } from '../token.config';
 
 @Injectable()
 export class JwtTokenService {

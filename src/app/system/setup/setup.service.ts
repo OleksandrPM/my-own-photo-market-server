@@ -4,11 +4,11 @@ import { SetupAdminDto } from './dto/setup-admin.dto';
 import { ProfilesService } from '../../product/profile/profile.service';
 import { SetupVerifyEmailDto } from './dto/setup-verify-email.dto';
 import { SetupIsEnabledResponseDto } from './dto/setup-is-enabled-response.dto';
-import { TokenManagerService } from '../tokens/tokens-manager.service';
+import { TokenManagerService } from '../token/token-manager.service';
 import { EmailManagerService } from '../communication/email/email-manager.service';
 import { SetupStatusResponseDto } from './dto/setup-status-response.dto';
 import { SetupCreatedminResponseDto } from './dto/setup-create-admin-response.dto';
-import { TypedToken, TokenType } from '../tokens/tokens.types';
+import { TypedToken, TokenType } from '../token/token.types';
 import { randomUUID, UUID } from 'crypto';
 
 @Injectable()

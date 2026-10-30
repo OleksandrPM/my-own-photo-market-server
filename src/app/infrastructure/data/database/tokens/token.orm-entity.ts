@@ -6,9 +6,9 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
-import { TokenType } from 'src/app/system/tokens/tokens.types';
-import type { PersistentTokenType } from 'src/app/system/tokens/tokens.types';
-import { TokenPayload } from 'src/app/system/tokens/tokens.payload';
+import { TokenType } from 'src/app/system/token/token.types';
+import type { PersistentTokenType } from 'src/app/system/token/token.types';
+import { TokenPayload } from 'src/app/system/token/token.payload';
 
 @Entity('tokens')
 @Index('user_tokens_user_id_idx', ['userId'])

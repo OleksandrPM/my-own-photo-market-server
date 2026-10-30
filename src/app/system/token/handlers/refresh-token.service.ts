@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { TokenService } from '../tokens.service';
+import { TokenService } from '../token.service';
 import { ProfileEntity } from 'src/app/product/profile/entities/profile.entity';
-import { TokenType, ValidatedToken } from '../tokens.types';
+import { TokenType, ValidatedToken } from '../token.types';
 
 @Injectable()
 export class RefreshTokenService {

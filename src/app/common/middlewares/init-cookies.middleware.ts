@@ -2,7 +2,7 @@ import { Injectable, NestMiddleware } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 import { randomUUID } from 'crypto';
 import { CookieService } from 'src/app/system/cookie/cookie.service';
-import { TokenManagerService } from 'src/app/system/tokens/tokens-manager.service';
+import { TokenManagerService } from 'src/app/system/token/token-manager.service';
 import { CookieName } from 'src/app/system/cookie/cookie.types';
 
 @Injectable()

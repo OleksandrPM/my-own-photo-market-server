@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { IsNull, Raw, Repository } from 'typeorm';
 import { DbConnectionName } from '../database.config';
 import { TokenOrmEntity } from './token.orm-entity';
-import { TokenPayload } from 'src/app/system/tokens/tokens.payload';
+import { TokenPayload } from 'src/app/system/token/token.payload';
 import {
   TokenFindManyOptions,
   TokenFindOneOptions,

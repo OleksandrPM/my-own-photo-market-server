@@ -1,5 +1,5 @@
 import { toMs } from 'src/app/common/utils';
-import { TokenConfigMap, TokenType, UniquenessType } from './tokens.types';
+import { TokenConfigMap, TokenType, UniquenessType } from './token.types';
 
 export const TOKEN_CONFIG: TokenConfigMap = {
   [TokenType.ACCESS]: {

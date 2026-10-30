@@ -1,5 +1,5 @@
-import { TokenPayloads } from '../tokens.payload';
-import { TokenType } from '../tokens.types';
+import { TokenPayloads } from '../token.payload';
+import { TokenType } from '../token.types';
 
 export class CreateTokenDto {
   userId: number | null = null;

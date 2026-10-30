@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ProfileEntity } from 'src/app/product/profile/entities/profile.entity';
-import { TokenType } from '../tokens.types';
+import { TokenType } from '../token.types';
 import { JwtTokenService } from '../jwt/jwt-token.service';
 
 @Injectable()

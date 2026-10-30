@@ -2,14 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { RefreshTokenService } from './handlers/refresh-token.service';
 import { EmailConfirmTokenService } from './handlers/email-confirm-token.service';
 import { EmailChangeTokenService } from './handlers/email-change-token.service';
-import { TokenService } from './tokens.service';
+import { TokenService } from './token.service';
 import { ProfileEntity } from '../../product/profile/entities/profile.entity';
 import { SetupTokenService } from './handlers/setup-token.service';
 import { PasswordResetTokenService } from './handlers/password-reset-token.service';
 import { TwoFactorAuthTokenService } from './handlers/two-factor-token.service';
 import { AccessTokenService } from './handlers/access-token.service';
 import { CsrfTokenService } from './handlers/csrf-token.service';
-import { PersistentTokenType } from './tokens.types';
+import { PersistentTokenType } from './token.types';
 
 @Injectable()
 export class TokenManagerService {
