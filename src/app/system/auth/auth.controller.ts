@@ -1,22 +1,18 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Get,
   HttpCode,
   HttpStatus,
-  ParseIntPipe,
   Post,
   Query,
-  Req,
   Res,
-  UnauthorizedException,
   UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import type { Request, Response } from 'express';
+import type { Response } from 'express';
 import {
   ApiBody,
   ApiConsumes,
@@ -24,21 +20,23 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiTags,
+  getSchemaPath,
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
-import { CookieService } from '../cookies/cookie.service';
-import { SelfOnlyGuard } from './guards/self-only.guard';
+import { CookieService } from '../cookie/cookie.service';
 import { AuthResponseDto } from './dto/auth-response.dto';
-import { apiRoutes } from '../../common/path-builder/api.routes';
+import { apiRoutes } from '../../common/api/api.routes';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import type { AuthenticatedRequest } from 'src/types/authenticated-request.types';
-import { CookieName } from '../cookies/cookies.types';
+import { CookieName } from '../cookie/cookie.types';
 import { VerifyEmailResponseDto } from './dto/verify-email-response.dto';
 import { MeResponseDto } from './dto/me-response.dto';
-import { LogoutDto } from './dto/logout.dto';
-import { decodeToken } from '../tokens/tokens.utils';
+import { RefreshResponseDto } from './dto/refresh-response.dto';
+import { CurrentUser } from 'src/app/common/decorators/current-user.decorator';
+import type { AuthenticatedUser } from './auth.types';
+import { Cookie } from 'src/app/common/decorators/cookie.decorator';
+import { LogoutResponseDto } from './dto/logout-response.dto';
 
 @ApiTags('auth')
 @Controller()
@@ -60,7 +58,10 @@ export class AuthController {
           format: 'binary',
           description: 'User avatar image. Optional.',
         },
-        email: { type: 'string', example: 'user@example.com' },
+        email: {
+          type: 'string',
+          example: 'user@example.com',
+        },
         username: {
           type: 'string',
           nullable: true,
@@ -82,15 +83,16 @@ export class AuthController {
   async register(
     @UploadedFile() avatar: Express.Multer.File | undefined,
     @Body() dto: RegisterDto,
+    @Cookie(CookieName.DEVICE_ID) deviceId: string,
     @Res({ passthrough: true }) res: Response,
   ): Promise<AuthResponseDto> {
-    const { response, refreshToken, deviceId } = await this.authService.signUp(
+    const { response, refreshToken } = await this.authService.signUp(
       dto,
+      deviceId,
       avatar,
     );
 
-    this.cookieService.setRefreshTokenCookie(res, refreshToken);
-    this.cookieService.setDeviceIdCookie(res, deviceId);
+    this.cookieService.setCookie(res, CookieName.REFRESH_TOKEN, refreshToken);
 
     return response;
   }
@@ -102,47 +104,17 @@ export class AuthController {
   @ApiOkResponse({ type: AuthResponseDto })
   async login(
     @Body() dto: LoginDto,
+    @Cookie(CookieName.DEVICE_ID) deviceId: string,
     @Res({ passthrough: true }) res: Response,
   ): Promise<AuthResponseDto> {
-    const { response, refreshToken, deviceId } =
-      await this.authService.signIn(dto);
+    const { response, refreshToken } = await this.authService.signIn(
+      dto,
+      deviceId,
+    );
 
-    this.cookieService.setRefreshTokenCookie(res, refreshToken);
-    this.cookieService.setDeviceIdCookie(res, deviceId);
+    this.cookieService.setCookie(res, CookieName.REFRESH_TOKEN, refreshToken);
 
     return response;
-  }
-
-  @Post(apiRoutes.AUTH.LOGOUT)
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Logout a user' })
-  @ApiOkResponse({
-    schema: {
-      type: 'object',
-      properties: { success: { type: 'boolean' } },
-      example: { success: true },
-    },
-  })
-  async logout(
-    @Body() dto: LogoutDto,
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-  ): Promise<{ isLoggedOut: boolean }> {
-    const { userId } = dto;
-    const refreshToken = req.cookies?.[CookieName.REFRESH_TOKEN];
-    const deviceId = req.cookies?.[CookieName.DEVICE_ID];
-    const sessionId = req.cookies?.[CookieName.SETUP_SESSION_ID];
-
-    if (refreshToken && deviceId) {
-      await this.authService.logout(userId, refreshToken, deviceId, sessionId);
-    }
-
-    // clear cookies regardless of whether logout in service succeeded, to ensure client state is cleared
-    this.cookieService.clearRefreshTokenCookie(res);
-    this.cookieService.clearDeviceIdCookie(res);
-    this.cookieService.clearCsrfCookie(res);
-
-    return { isLoggedOut: true };
   }
 
   @Get(apiRoutes.AUTH.VERIFY_EMAIL)
@@ -150,55 +122,66 @@ export class AuthController {
   @ApiOperation({ summary: 'Verify email address' })
   @ApiOkResponse({ type: VerifyEmailResponseDto })
   async verifyEmail(
-    @Query('token') encodedToken: string,
+    @Query('token') token: string,
   ): Promise<VerifyEmailResponseDto> {
-    const { tokenId, rawToken } = decodeToken(encodedToken);
-
-    const response = await this.authService.verifyEmail(tokenId, rawToken);
-
-    return response;
+    return this.authService.verifyEmail(token);
   }
 
   @Post(apiRoutes.AUTH.REFRESH)
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Refresh access token' })
-  @ApiOkResponse({
-    schema: {
-      type: 'object',
-      properties: {
-        accessToken: { type: 'string' },
-      },
-    },
-  })
-  @UseGuards(SelfOnlyGuard)
+  @ApiOperation({ summary: 'Refresh access & refresh tokens' })
+  @ApiOkResponse({ type: RefreshResponseDto })
   async refresh(
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    const refreshToken = req.cookies?.[CookieName.REFRESH_TOKEN];
-    const deviceId = req.cookies?.[CookieName.DEVICE_ID];
-
-    if (!refreshToken || !deviceId) {
-      throw new UnauthorizedException('Refresh token or device ID missing');
-    }
-
-    const sessionId = req.cookies?.[CookieName.SETUP_SESSION_ID];
+    @Cookie(CookieName.REFRESH_TOKEN)
+    refreshToken: string,
+    @Cookie(CookieName.DEVICE_ID)
+    deviceId: string,
+    @Res({ passthrough: true })
+    res: Response,
+  ): Promise<RefreshResponseDto> {
     const { accessToken, refreshToken: newRefreshToken } =
-      await this.authService.refresh(refreshToken, deviceId, sessionId);
+      await this.authService.refresh(refreshToken, deviceId);
 
-    this.cookieService.setRefreshTokenCookie(res, newRefreshToken);
+    this.cookieService.setCookie(
+      res,
+      CookieName.REFRESH_TOKEN,
+      newRefreshToken,
+    );
 
-    return { accessToken };
+    return {
+      accessToken,
+    };
   }
 
   @Get(apiRoutes.AUTH.ME)
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Get current user profile' })
   @ApiOkResponse({ type: MeResponseDto })
-  @UseGuards(JwtAuthGuard)
-  async getMe(@Req() req: AuthenticatedRequest): Promise<MeResponseDto> {
-    const userId = req.user!.id;
-    const user = await this.authService.getMe(userId);
+  async getMe(@CurrentUser() user: AuthenticatedUser): Promise<MeResponseDto> {
+    return this.authService.getMe(user.id);
+  }
 
-    return user;
+  @Post(apiRoutes.AUTH.LOGOUT)
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Logout a user' })
+  @ApiOkResponse({ type: LogoutResponseDto })
+  async logout(
+    @Cookie(CookieName.REFRESH_TOKEN)
+    refreshToken: string,
+    @Cookie(CookieName.DEVICE_ID)
+    deviceId: string,
+    @Res({ passthrough: true })
+    res: Response,
+  ): Promise<LogoutResponseDto> {
+    await this.authService.logout(refreshToken, deviceId);
+
+    this.cookieService.clearCookie(res, CookieName.REFRESH_TOKEN);
+
+    this.cookieService.clearCookie(res, CookieName.CSRF_TOKEN);
+
+    return {
+      isLoggedOut: true,
+    };
   }
 }

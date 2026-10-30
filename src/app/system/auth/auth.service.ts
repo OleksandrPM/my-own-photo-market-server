@@ -4,23 +4,20 @@ import {
   Logger,
   UnauthorizedException,
 } from '@nestjs/common';
-import { randomUUID } from 'crypto';
 import { verifyPassword } from '../../common/utils/password.utils';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { TokenManagerService } from '../tokens/tokens-manager.service';
-import { ProfilesService } from 'src/app/product/profiles/profiles.service';
-import { UserEntity } from 'src/app/product/profiles/entities/user.entity';
-import { EmailManagerService } from '../communications/email/email-manager.service';
-import { AvatarStorageService } from 'src/app/infrastructure/storage/image-storage/avatar-storage.service';
-import { UsersRepository } from 'src/app/infrastructure/data/database/users/users.repository';
+import { ProfilesService } from 'src/app/product/profile/profile.service';
+import { ProfileEntity } from 'src/app/product/profile/entities/profile.entity';
+import { EmailManagerService } from '../communication/email/email-manager.service';
+import { ProfilesRepository } from 'src/app/infrastructure/data/database/profiles/profiles.repository';
 import { AuthResult, RefreshResult } from './auth.types';
 import { WarningCode, warningService } from 'src/app/common/warning';
-import { ProfilePresenter } from 'src/app/product/profiles/profiles.presenter';
+import { ProfilePresenter } from 'src/app/product/profile/profile.presenter';
 import { WarningCollector } from 'src/app/common/warning/warning.collector';
 import { VerifyEmailResponseDto } from './dto/verify-email-response.dto';
 import { MeResponseDto } from './dto/me-response.dto';
-import { decodeToken } from '../tokens/tokens.utils';
 
 @Injectable()
 export class AuthService {
@@ -30,31 +27,22 @@ export class AuthService {
   constructor(
     private readonly profilesService: ProfilesService,
     private readonly profilePresenter: ProfilePresenter,
-    private readonly usersRepository: UsersRepository,
+    private readonly profilesRepository: ProfilesRepository,
     private readonly tokenService: TokenManagerService,
     private readonly emailService: EmailManagerService,
-    private readonly avatarStorageService: AvatarStorageService,
   ) {}
 
   private async issueAuthResult(
-    user: UserEntity,
+    user: ProfileEntity,
+    deviceId: string,
     warningCollector: WarningCollector = new WarningCollector(),
   ): Promise<AuthResult> {
-    const { dto: userProfile, warnings: userWarnings } =
-      await this.profilePresenter.toDtoWithWarnings(user);
+    const userProfile = await this.profilePresenter.toDto(user);
 
-    const accessToken = this.tokenService.generateAccessToken(user);
-    const deviceId = randomUUID();
-    const sessionId = randomUUID();
-    const { rawToken } = await this.tokenService.createRefreshToken(
-      user,
-      deviceId,
-      sessionId,
-    );
+    const accessToken = this.tokenService.generateAccessToken(user.id);
 
-    for (const warning of userWarnings ?? []) {
-      warningCollector.add(warning);
-    }
+    const { encodedToken: refreshToken } =
+      await this.tokenService.createRefreshToken(user.id, deviceId);
 
     return {
       response: {
@@ -64,18 +52,13 @@ export class AuthService {
           ? { warnings: warningCollector.getAll() }
           : {}),
       },
-      refreshToken: rawToken,
-      deviceId,
-      sessionId,
+      refreshToken,
     };
   }
 
-  // getCsrfToken(): string {
-  //   return this.tokenService.generateCsrfToken();
-  // }
-
   async signUp(
     dto: RegisterDto,
+    deviceId: string,
     avatar?: Express.Multer.File,
   ): Promise<AuthResult> {
     const warningCollector = new WarningCollector();
@@ -85,15 +68,15 @@ export class AuthService {
       throw new InternalServerErrorException('User creation failed');
     }
 
-    const confirmationToken =
-      await this.tokenService.createEmailConfirmationToken(user);
+    const { encodedToken: confirmationToken, tokenRecord } =
+      await this.tokenService.createEmailConfirmationToken(user.id);
 
     // Send confirmation email
     try {
       await this.emailService.sendConfirmationEmail(
         user,
-        confirmationToken.rawToken,
-        confirmationToken.expiresAt,
+        confirmationToken,
+        tokenRecord.expiresAt,
       );
     } catch (e) {
       this.logger.warn(
@@ -105,12 +88,15 @@ export class AuthService {
       warningCollector.add(this.warnings.create(WarningCode.EMAIL_NOT_SENT));
     }
 
-    return this.issueAuthResult(user, warningCollector);
+    return this.issueAuthResult(user, deviceId, warningCollector);
   }
 
-  async signIn({ email, password }: LoginDto): Promise<AuthResult> {
+  async signIn(
+    { email, password }: LoginDto,
+    deviceId: string,
+  ): Promise<AuthResult> {
     const userOrm =
-      await this.usersRepository.findByEmailWithPasswordHash(email);
+      await this.profilesRepository.findByEmailWithPasswordHash(email);
 
     if (!userOrm) {
       throw new UnauthorizedException('Invalid credentials');
@@ -125,47 +111,14 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const user = UserEntity.from(userOrm);
+    const user = ProfileEntity.from(userOrm);
 
-    return this.issueAuthResult(user);
+    return this.issueAuthResult(user, deviceId);
   }
 
-  async logout(
-    userId: number,
-    encodedRefreshToken: string,
-    deviceId: string,
-    sessionId: string,
-  ): Promise<void> {
-    const user = await this.profilesService.findById(userId);
-
-    if (!user) {
-      return;
-    }
-
-    const { tokenId, rawToken } = decodeToken(encodedRefreshToken);
-
-    try {
-      const tokenRecord = await this.tokenService.validateRefreshToken(
-        tokenId,
-        rawToken,
-        deviceId,
-        sessionId,
-      );
-
-      await this.tokenService.revokeTokenById(tokenRecord.id);
-    } catch {
-      // ignore — logout must always succeed
-    }
-  }
-
-  async verifyEmail(
-    tokenId: number,
-    token: string,
-  ): Promise<VerifyEmailResponseDto> {
-    const tokenRecord = await this.tokenService.validateEmailConfirmationToken(
-      tokenId,
-      token,
-    );
+  async verifyEmail(token: string): Promise<VerifyEmailResponseDto> {
+    const tokenRecord =
+      await this.tokenService.validateEmailConfirmationToken(token);
 
     if (!tokenRecord.userId) {
       throw new UnauthorizedException('Invalid token');
@@ -180,10 +133,10 @@ export class AuthService {
     // already verified → idempotent return
     if (user.isVerified) {
       await this.tokenService.revokeTokenById(tokenRecord.id).catch(() => {});
-      const { dto, warnings } =
-        await this.profilePresenter.toDtoWithWarnings(user);
 
-      return { user: dto, warnings };
+      const profile = await this.profilePresenter.toDto(user);
+
+      return { profile };
     }
 
     // verify email and update profile
@@ -192,40 +145,30 @@ export class AuthService {
     // revoke token after successful verification
     await this.tokenService.revokeTokenById(tokenRecord.id);
 
-    const { dto, warnings } =
-      await this.profilePresenter.toDtoWithWarnings(updatedUser);
+    const profile = await this.profilePresenter.toDto(updatedUser);
 
-    return { user: dto, warnings };
+    return { profile };
   }
 
   async refresh(
-    encodedRefreshToken: string,
+    refreshToken: string,
     deviceId: string,
-    sessionId: string,
   ): Promise<RefreshResult> {
-    const { tokenId, rawToken } = decodeToken(encodedRefreshToken);
-
     const tokenRecord = await this.tokenService.validateRefreshToken(
-      tokenId,
-      rawToken,
+      refreshToken,
       deviceId,
-      sessionId,
     );
-
-    if (!tokenRecord.userId) {
-      throw new UnauthorizedException('Invalid refresh token');
-    }
 
     const user = await this.profilesService.findById(tokenRecord.userId);
 
     if (!user) {
-      throw new UnauthorizedException('Invalid refresh token');
+      throw new UnauthorizedException('User not found');
     }
 
     // Issue new tokens
-    const accessToken = this.tokenService.generateAccessToken(user);
-    const { rawToken: newRefreshToken } =
-      await this.tokenService.createRefreshToken(user, deviceId, sessionId);
+    const accessToken = this.tokenService.generateAccessToken(user.id);
+    const { encodedToken: newRefreshToken } =
+      await this.tokenService.createRefreshToken(user.id, deviceId);
 
     // Revoke old refresh token
     await this.tokenService.revokeTokenById(tokenRecord.id);
@@ -233,16 +176,28 @@ export class AuthService {
     return { accessToken, refreshToken: newRefreshToken };
   }
 
-  async getMe(userId: UserEntity['id']): Promise<MeResponseDto> {
+  async getMe(userId: ProfileEntity['id']): Promise<MeResponseDto> {
     const user = await this.profilesService.findById(userId);
 
     if (!user) {
       throw new UnauthorizedException('Unauthorized');
     }
 
-    const { dto, warnings } =
-      await this.profilePresenter.toDtoWithWarnings(user);
+    const profile = await this.profilePresenter.toDto(user);
 
-    return { user: dto, warnings };
+    return { profile };
+  }
+
+  async logout(refreshToken: string, deviceId: string): Promise<void> {
+    try {
+      const tokenRecord = await this.tokenService.validateRefreshToken(
+        refreshToken,
+        deviceId,
+      );
+
+      await this.tokenService.revokeTokenById(tokenRecord.id);
+    } catch {
+      // logout must always succeed
+    }
   }
 }
