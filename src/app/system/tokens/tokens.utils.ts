@@ -26,7 +26,6 @@ export function encodeToken(
   }
 
   if (!rawToken || rawToken.includes('.')) {
-    // захищаємо формат (delimiter = ".")
     throw new Error('Invalid rawToken');
   }
 

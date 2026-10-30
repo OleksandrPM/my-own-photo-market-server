@@ -20,7 +20,7 @@ export type TokenPayloads = {
   [TokenType.TWO_FA]: null;
 };
 
-export type UserTokenPayload = TokenPayloads[TokenType];
+export type TokenPayload = TokenPayloads[TokenType];
 
 export type TokenPayloadInputs = {
   [TokenType.ACCESS]: {};

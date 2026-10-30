@@ -9,14 +9,14 @@ export const TOKEN_CONFIG: TokenConfigMap = {
     ttl: toMs.days(30),
     uniqueness: UniquenessType.PER_DEVICE,
     requiresDeviceId: true,
-    requiresSessionId: true,
+    requiresSessionId: false,
     requiresUserAssociation: true,
   },
 
   [TokenType.INITIAL_SETUP]: {
     ttl: toMs.minutes(15),
     uniqueness: UniquenessType.SINGLE,
-    requiresDeviceId: false,
+    requiresDeviceId: true,
     requiresSessionId: true,
     requiresUserAssociation: false,
   },
@@ -48,8 +48,8 @@ export const TOKEN_CONFIG: TokenConfigMap = {
   [TokenType.TWO_FA]: {
     ttl: toMs.minutes(5),
     uniqueness: UniquenessType.SINGLE,
-    requiresDeviceId: false,
-    requiresSessionId: true,
+    requiresDeviceId: true,
+    requiresSessionId: false,
     requiresUserAssociation: true,
   },
 };

@@ -1,5 +1,5 @@
 import { TokenOrmEntity } from 'src/app/infrastructure/data/database/tokens/token.orm-entity';
-import { UserEntity } from 'src/app/product/profiles/entities/user.entity';
+import { ProfileEntity } from 'src/app/product/profile/entities/profile.entity';
 import { TokenPayloads } from './tokens.payload';
 
 export enum TokenType {
@@ -22,9 +22,12 @@ export type TypedToken<T extends PersistentTokenType> = Omit<
   payload: TokenPayloads[T];
 };
 
-export type AnyTypedToken = {
-  [K in PersistentTokenType]: TypedToken<K>;
-}[PersistentTokenType];
+export type ValidatedToken<T extends PersistentTokenType> =
+  T extends TokenType.INITIAL_SETUP
+    ? TypedToken<T>
+    : Omit<TypedToken<T>, 'userId'> & {
+        userId: number;
+      };
 
 export enum UniquenessType {
   SINGLE = 'single',
@@ -51,33 +54,38 @@ export type TokenConfigMap = {
 export type CreateArgsMap = {
   [TokenType.REFRESH]: {
     type: TokenType.REFRESH;
-    userId: UserEntity['id'];
+    userId: ProfileEntity['id'];
     deviceId: string;
   };
+
   [TokenType.INITIAL_SETUP]: {
     type: TokenType.INITIAL_SETUP;
     userId: null;
     sessionId: string;
     ownerEmail: string;
   };
+
   [TokenType.EMAIL_CONFIRMATION]: {
     type: TokenType.EMAIL_CONFIRMATION;
-    userId: UserEntity['id'];
+    userId: ProfileEntity['id'];
   };
+
   [TokenType.EMAIL_CHANGE]: {
     type: TokenType.EMAIL_CHANGE;
-    userId: UserEntity['id'];
+    userId: ProfileEntity['id'];
     newEmail: string;
   };
+
   [TokenType.PASSWORD_RESET]: {
     type: TokenType.PASSWORD_RESET;
-    userId: UserEntity['id'] | null;
+    userId: ProfileEntity['id'];
     email: string;
   };
+
   [TokenType.TWO_FA]: {
     type: TokenType.TWO_FA;
-    userId: UserEntity['id'];
-    sessionId: string;
+    userId: ProfileEntity['id'];
+    deviceId: string;
   };
 };
 
@@ -86,44 +94,41 @@ export type CreateTokenArgs<T extends PersistentTokenType> = CreateArgsMap[T];
 export type ValidateArgsMap = {
   [TokenType.REFRESH]: {
     type: TokenType.REFRESH;
-    tokenId: number;
-    token: string;
+    encodedToken: string;
     deviceId: string;
   };
+
   [TokenType.INITIAL_SETUP]: {
     type: TokenType.INITIAL_SETUP;
-    tokenId: number;
-    token: string;
+    encodedToken: string;
     sessionId?: string;
     skipSessionCheck?: boolean;
   };
+
   [TokenType.EMAIL_CONFIRMATION]: {
     type: TokenType.EMAIL_CONFIRMATION;
-    tokenId: number;
-    token: string;
+    encodedToken: string;
   };
+
   [TokenType.EMAIL_CHANGE]: {
     type: TokenType.EMAIL_CHANGE;
-    tokenId: number;
-    token: string;
+    encodedToken: string;
   };
+
   [TokenType.PASSWORD_RESET]: {
     type: TokenType.PASSWORD_RESET;
-    tokenId: number;
-    token: string;
+    encodedToken: string;
   };
+
   [TokenType.TWO_FA]: {
     type: TokenType.TWO_FA;
-    tokenId: number;
-    token: string;
-    sessionId: string;
+    encodedToken: string;
+    deviceId: string;
   };
 };
 
 export type ValidateTokenArgs<T extends PersistentTokenType> =
   ValidateArgsMap[T];
-
-export type AnyValidateTokenArgs = ValidateTokenArgs<PersistentTokenType>;
 
 export type ParsedToken = {
   tokenId: number;

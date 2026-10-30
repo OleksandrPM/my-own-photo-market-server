@@ -1,13 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { TokenService } from '../tokens.service';
 import { TokenType } from '../tokens.types';
-import { UserEntity } from 'src/app/product/profiles/entities/user.entity';
+import { ProfileEntity } from 'src/app/product/profile/entities/profile.entity';
 
 @Injectable()
 export class EmailChangeTokenService {
   constructor(private readonly tokenService: TokenService) {}
 
-  async createEmailChangeToken(userId: UserEntity['id'], newEmail: string) {
+  async createEmailChangeToken(userId: ProfileEntity['id'], newEmail: string) {
     return this.tokenService.createToken({
       type: TokenType.EMAIL_CHANGE,
       userId,
@@ -15,11 +15,10 @@ export class EmailChangeTokenService {
     });
   }
 
-  async validateEmailChangeToken(tokenId: number, token: string) {
+  async validateEmailChangeToken(encodedToken: string) {
     return this.tokenService.validateToken({
       type: TokenType.EMAIL_CHANGE,
-      tokenId,
-      token,
+      encodedToken,
     });
   }
 }

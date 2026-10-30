@@ -7,9 +7,12 @@ import {
   TokenType,
   PersistentTokenType,
   ValidateTokenArgs,
+  ValidatedToken,
 } from './tokens.types';
-import { buildTokenPayload, UserTokenPayload } from './tokens.payload';
+import { buildTokenPayload, TokenPayload } from './tokens.payload';
 import {
+  decodeToken,
+  encodeToken,
   generateRandomToken,
   hashToken,
   verifyTokenHash,
@@ -24,15 +27,7 @@ import { TOKEN_CONFIG } from './tokens.config';
 export class TokenService {
   constructor(private readonly tokensRepository: TokensRepository) {}
 
-  // ---------------- Helpers ----------------
-
-  private requiresDeviceId(type: PersistentTokenType): boolean {
-    return TOKEN_CONFIG[type].requiresDeviceId;
-  }
-
-  private requiresSessionId(type: PersistentTokenType): boolean {
-    return TOKEN_CONFIG[type].requiresSessionId;
-  }
+  // Create helpers
 
   private buildRevokeWhereForCreate<T extends PersistentTokenType>(
     args: CreateTokenArgs<T>,
@@ -53,14 +48,7 @@ export class TokenService {
           revokedAt: IsNull(),
         };
 
-      // SINGLE user-bound tokens
       case TokenType.PASSWORD_RESET:
-        return {
-          type: args.type,
-          userId: args.userId === null ? IsNull() : args.userId,
-          revokedAt: IsNull(),
-        };
-
       case TokenType.EMAIL_CONFIRMATION:
       case TokenType.EMAIL_CHANGE:
       case TokenType.TWO_FA:
@@ -72,80 +60,123 @@ export class TokenService {
 
       default: {
         const exhaustive: never = args;
-        throw new Error(`Unsupported token type: ${exhaustive}`);
+
+        throw new Error(
+          `Unsupported token type: ${JSON.stringify(exhaustive)}`,
+        );
       }
     }
   }
 
   private async revokeExistingTokensForCreate<T extends PersistentTokenType>(
     args: CreateTokenArgs<T>,
-  ) {
-    const where = this.buildRevokeWhereForCreate(args);
-    await this.tokensRepository.revokeWhere(where, new Date());
+  ): Promise<void> {
+    await this.tokensRepository.revokeWhere(
+      this.buildRevokeWhereForCreate(args),
+      new Date(),
+    );
   }
 
-  private toTypedToken<T extends PersistentTokenType>(
-    token: TokenOrmEntity,
-  ): TypedToken<T> {
-    return token as TypedToken<T>;
+  // Validation helpers
+
+  private validateDeviceRequirements<T extends PersistentTokenType>(
+    record: TokenOrmEntity,
+    args: ValidateTokenArgs<T>,
+  ): void {
+    if (!TOKEN_CONFIG[record.type].requiresDeviceId) {
+      return;
+    }
+
+    if (!('deviceId' in args) || !args.deviceId) {
+      throw new UnauthorizedException('DeviceId is required');
+    }
+
+    if (!record.deviceId || record.deviceId !== args.deviceId) {
+      throw new UnauthorizedException('Device mismatch');
+    }
   }
 
-  // ---------------- Public API ----------------
+  private validateSessionRequirements<T extends PersistentTokenType>(
+    record: TokenOrmEntity,
+    args: ValidateTokenArgs<T>,
+  ): void {
+    if (
+      !TOKEN_CONFIG[record.type].requiresSessionId ||
+      ('skipSessionCheck' in args && args.skipSessionCheck)
+    ) {
+      return;
+    }
+
+    if (!('sessionId' in args) || !args.sessionId) {
+      throw new UnauthorizedException('SessionId is required');
+    }
+
+    if (!record.sessionId || record.sessionId !== args.sessionId) {
+      throw new UnauthorizedException('Session mismatch');
+    }
+  }
+
+  private validateUserAssociation(
+    record: TokenOrmEntity,
+    type: PersistentTokenType,
+  ): void {
+    if (type === TokenType.INITIAL_SETUP) {
+      if (record.userId !== null) {
+        throw new UnauthorizedException(
+          'INITIAL_SETUP token must not be associated with a user',
+        );
+      }
+
+      return;
+    }
+
+    if (record.userId === null) {
+      throw new UnauthorizedException('Token is not associated with a user');
+    }
+  }
+
+  // Public API
 
   async createToken<T extends PersistentTokenType>(
     args: CreateTokenArgs<T>,
   ): Promise<{
-    id: number;
-    rawToken: string;
-    expiresAt: Date;
-    record: TypedToken<T>;
+    encodedToken: string;
+    tokenRecord: TypedToken<T>;
   }> {
-    const type = args.type;
-
-    // revoke previous by scope
     await this.revokeExistingTokensForCreate(args);
 
-    // 2) secret + hash
     const rawToken = generateRandomToken();
     const tokenHash = await hashToken(rawToken);
 
-    // 3) build payload
-    const payload = buildTokenPayload(type, args);
-
-    // 4) entity fields
-    const deviceId = 'deviceId' in args ? args.deviceId : null;
-    const sessionId = 'sessionId' in args ? args.sessionId : null;
-    const expiresAt = new Date(Date.now() + TOKEN_CONFIG[type].ttl);
+    const payload = buildTokenPayload(args.type, args);
 
     const record = this.tokensRepository.create({
       userId: args.userId,
-      type,
+      type: args.type,
       tokenHash,
       payload,
-      deviceId,
-      sessionId,
-      expiresAt,
+      deviceId: 'deviceId' in args ? args.deviceId : null,
+      sessionId: 'sessionId' in args ? args.sessionId : null,
+      expiresAt: new Date(Date.now() + TOKEN_CONFIG[args.type].ttl),
     });
 
     const saved = await this.tokensRepository.save(record);
 
     return {
-      id: saved.id,
-      rawToken,
-      expiresAt: saved.expiresAt,
-      record: this.toTypedToken<T>(saved),
+      encodedToken: encodeToken(saved.id, rawToken),
+      tokenRecord: saved as TypedToken<T>,
     };
   }
 
   async validateToken<T extends PersistentTokenType>(
     args: ValidateTokenArgs<T>,
-  ): Promise<TypedToken<T>> {
-    const now = new Date();
+  ): Promise<ValidatedToken<T>> {
+    const { tokenId, rawToken } = decodeToken(args.encodedToken);
 
-    const record = await this.tokensRepository.findById(args.tokenId);
+    const record = await this.tokensRepository.findById(tokenId);
 
     if (!record) {
-      throw new UnauthorizedException('Invalid token');
+      throw new UnauthorizedException('Token not found');
     }
 
     if (record.type !== args.type) {
@@ -156,68 +187,44 @@ export class TokenService {
       throw new UnauthorizedException('Token revoked');
     }
 
-    if (record.expiresAt < now) {
+    if (record.expiresAt < new Date()) {
       throw new UnauthorizedException('Token expired');
     }
 
-    const ok = await verifyTokenHash(record.tokenHash, args.token);
+    const valid = await verifyTokenHash(record.tokenHash, rawToken);
 
-    if (!ok) {
+    if (!valid) {
       throw new UnauthorizedException('Invalid token');
     }
 
-    if (this.requiresDeviceId(args.type)) {
-      if (!('deviceId' in args) || !args.deviceId) {
-        throw new UnauthorizedException('DeviceId is required');
-      }
+    this.validateDeviceRequirements(record, args);
 
-      if (!record.deviceId || record.deviceId !== args.deviceId) {
-        throw new UnauthorizedException('Device mismatch');
-      }
-    }
+    this.validateSessionRequirements(record, args);
 
-    if (
-      this.requiresSessionId(args.type) &&
-      !('skipSessionCheck' in args && args.skipSessionCheck)
-    ) {
-      if (!('sessionId' in args) || !args.sessionId) {
-        throw new UnauthorizedException('SessionId is required');
-      }
+    this.validateUserAssociation(record, args.type);
 
-      if (!record.sessionId || record.sessionId !== args.sessionId) {
-        throw new UnauthorizedException('Session mismatch');
-      }
-    }
-
-    if (args.type === TokenType.INITIAL_SETUP) {
-      if (record.userId !== null) {
-        throw new UnauthorizedException(
-          'INITIAL_SETUP token must not be associated with a user',
-        );
-      }
-    } else {
-      if (record.userId === null) {
-        throw new UnauthorizedException('Token is not associated with a user');
-      }
-    }
-
-    return this.toTypedToken<T>(record);
+    return record as ValidatedToken<T>;
   }
 
-  async revokeTokenById(id: number, date = new Date()) {
+  async revokeTokenById(id: number, date = new Date()): Promise<void> {
     await this.tokensRepository.revokeById(id, date);
   }
 
-  async revokeTokensByType(tokenType: PersistentTokenType, date = new Date()) {
-    return this.tokensRepository.revokeWhere({ type: tokenType }, date);
+  async revokeTokensByType(type: PersistentTokenType, date = new Date()) {
+    return this.tokensRepository.revokeWhere({ type }, date);
   }
 
-  // update payload helpers
-  async updateTokenPayload(id: number, payload: UserTokenPayload | null) {
+  async updateTokenPayload(
+    id: number,
+    payload: TokenPayload | null,
+  ): Promise<void> {
     await this.tokensRepository.updatePayloadById(id, payload);
   }
 
-  async mergeTokenPayload(id: number, payloadPatch: Record<string, unknown>) {
+  async mergeTokenPayload(
+    id: number,
+    payloadPatch: Record<string, unknown>,
+  ): Promise<void> {
     await this.tokensRepository.mergePayloadById(id, payloadPatch);
   }
 }

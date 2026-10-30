@@ -1,26 +1,25 @@
 import { Injectable } from '@nestjs/common';
 import { TokenService } from '../tokens.service';
 import { TokenType } from '../tokens.types';
-import { UserEntity } from 'src/app/product/profiles/entities/user.entity';
+import { ProfileEntity } from 'src/app/product/profile/entities/profile.entity';
 
 @Injectable()
 export class TwoFactorAuthTokenService {
   constructor(private readonly tokenService: TokenService) {}
 
-  async createTwoFaToken(userId: UserEntity['id'], sessionId: string) {
+  async createTwoFaToken(userId: ProfileEntity['id'], deviceId: string) {
     return this.tokenService.createToken({
       type: TokenType.TWO_FA,
       userId,
-      sessionId,
+      deviceId,
     });
   }
 
-  async validateTwoFaToken(tokenId: number, token: string, sessionId: string) {
+  async validateTwoFaToken(encodedToken: string, deviceId: string) {
     return this.tokenService.validateToken({
       type: TokenType.TWO_FA,
-      tokenId,
-      token,
-      sessionId,
+      encodedToken,
+      deviceId,
     });
   }
 }

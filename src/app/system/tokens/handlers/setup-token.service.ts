@@ -57,20 +57,18 @@ export class SetupTokenService {
     return this.findLatestSetupTokenBySessionId(sessionId);
   }
 
-  async validateSetupToken(tokenId: number, token: string, sessionId: string) {
+  async validateSetupToken(encodedToken: string, sessionId: string) {
     return this.tokenService.validateToken({
       type: TokenType.INITIAL_SETUP,
-      tokenId,
-      token,
+      encodedToken,
       sessionId,
     });
   }
 
-  async validateSetupTokenFromEmail(tokenId: number, token: string) {
+  async validateSetupTokenFromEmail(encodedToken: string) {
     return this.tokenService.validateToken({
       type: TokenType.INITIAL_SETUP,
-      tokenId,
-      token,
+      encodedToken,
       skipSessionCheck: true,
     });
   }

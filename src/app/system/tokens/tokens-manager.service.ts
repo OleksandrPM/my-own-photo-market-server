@@ -3,7 +3,7 @@ import { RefreshTokenService } from './handlers/refresh-token.service';
 import { EmailConfirmTokenService } from './handlers/email-confirm-token.service';
 import { EmailChangeTokenService } from './handlers/email-change-token.service';
 import { TokenService } from './tokens.service';
-import { UserEntity } from '../../product/profiles/entities/user.entity';
+import { ProfileEntity } from '../../product/profile/entities/profile.entity';
 import { SetupTokenService } from './handlers/setup-token.service';
 import { PasswordResetTokenService } from './handlers/password-reset-token.service';
 import { TwoFactorAuthTokenService } from './handlers/two-factor-token.service';
@@ -44,7 +44,7 @@ export class TokenManagerService {
   }
 
   // Access token methods
-  generateAccessToken(userId: UserEntity['id']): string {
+  generateAccessToken(userId: ProfileEntity['id']): string {
     return this.accessTokenService.generateAccessToken(userId);
   }
 
@@ -57,12 +57,12 @@ export class TokenManagerService {
     return this.setupTokenService.getSetupTokenBySessionId(sessionId);
   }
 
-  async validateSetupToken(tokenId: number, token: string, sessionId: string) {
-    return this.setupTokenService.validateSetupToken(tokenId, token, sessionId);
+  async validateSetupToken(encodedToken: string, sessionId: string) {
+    return this.setupTokenService.validateSetupToken(encodedToken, sessionId);
   }
 
-  async validateSetupTokenFromEmail(tokenId: number, token: string) {
-    return this.setupTokenService.validateSetupTokenFromEmail(tokenId, token);
+  async validateSetupTokenFromEmail(encodedToken: string) {
+    return this.setupTokenService.validateSetupTokenFromEmail(encodedToken);
   }
 
   async confirmOwnerEmail(tokenId: number) {
@@ -74,70 +74,61 @@ export class TokenManagerService {
   }
 
   // Refresh token methods
-  async createRefreshToken(userId: UserEntity['id'], deviceId: string) {
+  async createRefreshToken(userId: ProfileEntity['id'], deviceId: string) {
     return this.refreshTokenService.createRefreshToken(userId, deviceId);
   }
 
-  async validateRefreshToken(tokenId: number, token: string, deviceId: string) {
+  async validateRefreshToken(encodedToken: string, deviceId: string) {
     return this.refreshTokenService.validateRefreshToken(
-      tokenId,
-      token,
+      encodedToken,
       deviceId,
     );
   }
 
   // Email confirmation token methods
-  async createEmailConfirmationToken(userId: UserEntity['id']) {
+  async createEmailConfirmationToken(userId: ProfileEntity['id']) {
     return this.emailConfirmTokenService.createEmailConfirmationToken(userId);
   }
 
-  async validateEmailConfirmationToken(tokenId: number, token: string) {
-    return this.emailConfirmTokenService.validateEmailConfirmationToken(
-      tokenId,
-      token,
-    );
+  async validateEmailConfirmationToken(token: string) {
+    return this.emailConfirmTokenService.validateEmailConfirmationToken(token);
   }
 
   // Email change token methods
-  async createEmailChangeToken(userId: UserEntity['id'], newEmail: string) {
+  async createEmailChangeToken(userId: ProfileEntity['id'], newEmail: string) {
     return this.emailChangeTokenService.createEmailChangeToken(
       userId,
       newEmail,
     );
   }
 
-  async validateEmailChangeToken(tokenId: number, token: string) {
-    return this.emailChangeTokenService.validateEmailChangeToken(
-      tokenId,
-      token,
-    );
+  async validateEmailChangeToken(encodedToken: string) {
+    return this.emailChangeTokenService.validateEmailChangeToken(encodedToken);
   }
 
   // Password reset token methods
-  async createPasswordResetToken(userId: UserEntity['id'], email: string) {
+  async createPasswordResetToken(userId: ProfileEntity['id'], email: string) {
     return this.passwordResetTokenService.createPasswordResetToken(
       userId,
       email,
     );
   }
 
-  async validatePasswordResetToken(tokenId: number, token: string) {
+  async validatePasswordResetToken(encodedToken: string) {
     return this.passwordResetTokenService.validatePasswordResetToken(
-      tokenId,
-      token,
+      encodedToken,
     );
   }
 
   // Two-factor auth token methods
-  async createTwoFaToken(userId: UserEntity['id'], sessionId: string) {
-    return this.twoFactorAuthTokenService.createTwoFaToken(userId, sessionId);
+  async createTwoFaToken(userId: ProfileEntity['id'], deviceId: string) {
+    return this.twoFactorAuthTokenService.createTwoFaToken(userId, deviceId);
   }
 
-  async validateTwoFaToken(tokenId: number, token: string, sessionId: string) {
+  async validateTwoFaToken(encodedToken: string, deviceId: string) {
     return this.twoFactorAuthTokenService.validateTwoFaToken(
-      tokenId,
-      token,
-      sessionId,
+      encodedToken,
+      deviceId,
     );
   }
 }
