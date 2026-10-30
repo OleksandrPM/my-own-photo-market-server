@@ -1,7 +1,7 @@
 import { Warning } from 'src/app/common/warning';
-import { ProfileResponseDto } from 'src/app/product/profiles/dto/profile-response.dto';
+import { ProfileResponseDto } from 'src/app/product/profile/dto/profile-response.dto';
 
 export class MeResponseDto {
-  user!: ProfileResponseDto;
+  profile!: ProfileResponseDto;
   warnings?: Warning[];
 }

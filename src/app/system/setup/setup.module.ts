@@ -4,10 +4,10 @@ import { SetupService } from './setup.service';
 import { TokenModule } from '../tokens/tokens.module';
 import { CookiesModule } from '../cookies/cookies.module';
 import { EmailModule } from '../communications/email/email.module';
-import { ProfilesModule } from 'src/app/product/profiles/profiles.module';
+import { ProfileModule } from 'src/app/product/profile/profile.module';
 
 @Module({
-  imports: [ProfilesModule, TokenModule, EmailModule, CookiesModule],
+  imports: [ProfileModule, TokenModule, EmailModule, CookiesModule],
   controllers: [SetupController],
   providers: [SetupService],
 })

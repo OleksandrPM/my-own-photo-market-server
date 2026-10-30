@@ -1,5 +1,5 @@
 import { CanActivate, Injectable } from '@nestjs/common';
-import { ProfilesService } from 'src/app/product/profiles/profiles.service';
+import { ProfilesService } from 'src/app/product/profile/profile.service';
 
 @Injectable()
 export class SetupEnabledGuard implements CanActivate {

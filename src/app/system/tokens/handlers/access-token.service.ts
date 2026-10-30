@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { UserEntity } from 'src/app/product/profiles/entities/user.entity';
+import { ProfileEntity } from 'src/app/product/profile/entities/profile.entity';
 import { TokenType } from '../tokens.types';
 import { JwtTokenService } from '../jwt/jwt-token.service';
 
@@ -7,7 +7,7 @@ import { JwtTokenService } from '../jwt/jwt-token.service';
 export class AccessTokenService {
   constructor(private readonly jwtToken: JwtTokenService) {}
 
-  generateAccessToken(userId: UserEntity['id']): string {
+  generateAccessToken(userId: ProfileEntity['id']): string {
     return this.jwtToken.signAccessToken({
       sub: userId,
       type: TokenType.ACCESS,

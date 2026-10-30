@@ -1,32 +1,29 @@
-import { UserRole } from '../user.types';
+import { UserRole } from '../profile.types';
 
-export type UserId = number;
-
-export interface UserProps {
-  id: UserId;
+export interface ProfileProps {
+  id: number;
   email: string;
   username: string | null;
   role: UserRole;
-  avatarKey: string | null;
   isVerified: boolean;
   deletedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
 
-export class UserEntity {
-  private constructor(private readonly props: UserProps) {}
+export class ProfileEntity {
+  private constructor(private readonly props: ProfileProps) {}
 
-  static from(props: UserProps): UserEntity {
+  static from(props: ProfileProps): ProfileEntity {
     if (!props.email) {
-      throw new Error('User email is required');
+      throw new Error('Profile email is required');
     }
 
-    return new UserEntity({ ...props });
+    return new ProfileEntity({ ...props });
   }
 
   // Getters
-  get id(): UserId {
+  get id(): number {
     return this.props.id;
   }
 
@@ -40,10 +37,6 @@ export class UserEntity {
 
   get role(): UserRole {
     return this.props.role;
-  }
-
-  get avatarKey(): string | null {
-    return this.props.avatarKey;
   }
 
   get isVerified(): boolean {
@@ -62,16 +55,16 @@ export class UserEntity {
     return this.props.updatedAt;
   }
 
-  verify(): UserEntity {
+  verify(): ProfileEntity {
     if (this.props.isVerified) return this;
-    return new UserEntity({ ...this.props, isVerified: true });
+    return new ProfileEntity({ ...this.props, isVerified: true });
   }
 
-  changeUsername(username: string | null): UserEntity {
-    return new UserEntity({ ...this.props, username });
+  changeUsername(username: string | null): ProfileEntity {
+    return new ProfileEntity({ ...this.props, username });
   }
 
-  toJSON(): UserProps {
+  toJSON(): ProfileProps {
     return { ...this.props };
   }
 }

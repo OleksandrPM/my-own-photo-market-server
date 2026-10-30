@@ -1,4 +1,3 @@
-import { UserRole } from 'src/app/product/profiles/user.types';
 import {
   Column,
   CreateDateColumn,
@@ -7,25 +6,17 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { UserRole } from 'src/app/product/profile/profile.types';
 
-@Entity('users')
-@Index(
-  // ✅ Partial UNIQUE index for active users only
-  'users_email_unique_active_idx',
-  ['email'],
-  {
-    unique: true,
-    // example condition — adjust to your lifecycle rules
-    where: `"deleted_at" IS NULL`,
-  },
-)
-export class UserOrmEntity {
+@Entity('profiles')
+@Index('profiles_email_unique_active_idx', ['email'], {
+  unique: true,
+  where: `"deleted_at" IS NULL`,
+})
+export class ProfileOrmEntity {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  /**
-   * ✅ Case‑insensitive email via Postgres CITEXT
-   */
   @Column({
     type: 'citext',
   })
@@ -34,9 +25,6 @@ export class UserOrmEntity {
   @Column({ type: 'text', nullable: true, default: null })
   username!: string | null;
 
-  /**
-   * ✅ Never selected by default (security first)
-   */
   @Column({
     name: 'password_hash',
     type: 'text',
@@ -52,23 +40,12 @@ export class UserOrmEntity {
   role!: UserRole;
 
   @Column({
-    name: 'avatar_key',
-    type: 'text',
-    nullable: true,
-    default: null,
-  })
-  avatarKey!: string | null;
-
-  @Column({
     name: 'is_verified',
     type: 'boolean',
     default: false,
   })
   isVerified!: boolean;
 
-  /**
-   * ✅ Soft‑delete column (for partial index support)
-   */
   @Column({
     name: 'deleted_at',
     type: 'timestamp with time zone',

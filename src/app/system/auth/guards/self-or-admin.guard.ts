@@ -1,5 +1,5 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
-import { UserRole } from 'src/app/product/profiles/user.types';
+import { UserRole } from 'src/app/product/profile/profile.types';
 
 @Injectable()
 export class SelfOrAdminGuard implements CanActivate {

@@ -1,6 +1,6 @@
 import { Expose } from 'class-transformer';
-import { UserRole } from '../user.types';
-import { UserEntity } from '../entities/user.entity';
+import { UserRole } from '../profile.types';
+import { ProfileEntity } from '../entities/profile.entity';
 
 export class ProfileResponseDto {
   @Expose()
@@ -28,7 +28,7 @@ export class ProfileResponseDto {
   updatedAt!: Date;
 
   static fromDomain(
-    user: UserEntity,
+    user: ProfileEntity,
     avatarUrl: string | null,
   ): ProfileResponseDto {
     const dto = new ProfileResponseDto();

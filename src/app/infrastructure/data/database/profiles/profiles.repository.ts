@@ -1,18 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { UserOrmEntity } from './user.orm-entity';
+import { ProfileOrmEntity } from './profile.orm-entity';
 import { DbConnectionName } from '../database.config';
-import { UserRole } from 'src/app/product/profiles/user.types';
+import { UserRole } from 'src/app/product/profile/profile.types';
 
 @Injectable()
-export class UsersRepository {
+export class ProfilesRepository {
   constructor(
-    @InjectRepository(UserOrmEntity, DbConnectionName.READER)
-    private readonly reader: Repository<UserOrmEntity>,
+    @InjectRepository(ProfileOrmEntity, DbConnectionName.READER)
+    private readonly reader: Repository<ProfileOrmEntity>,
 
-    @InjectRepository(UserOrmEntity, DbConnectionName.EDITOR)
-    private readonly editor: Repository<UserOrmEntity>,
+    @InjectRepository(ProfileOrmEntity, DbConnectionName.EDITOR)
+    private readonly editor: Repository<ProfileOrmEntity>,
   ) {}
 
   // ---------- Read ----------
@@ -50,15 +50,15 @@ export class UsersRepository {
 
   // ---------- Write ----------
 
-  create(payload: Partial<UserOrmEntity>) {
+  create(payload: Partial<ProfileOrmEntity>) {
     return this.editor.create(payload);
   }
 
-  save(user: UserOrmEntity) {
+  save(user: ProfileOrmEntity) {
     return this.editor.save(user);
   }
 
-  update(id: number, payload: Partial<UserOrmEntity>) {
+  update(id: number, payload: Partial<ProfileOrmEntity>) {
     return this.editor.update(id, payload);
   }
 

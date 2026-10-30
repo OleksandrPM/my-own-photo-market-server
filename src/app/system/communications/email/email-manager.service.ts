@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { EmailSetupService } from './handlers/email-setup.service';
 import { EmailVerificationService } from './handlers/email-verification.service';
-import { UserEntity } from 'src/app/product/profiles/entities/user.entity';
+import { ProfileEntity } from 'src/app/product/profile/entities/profile.entity';
 
 @Injectable()
 export class EmailManagerService {
@@ -25,7 +25,7 @@ export class EmailManagerService {
 
   // Authentication related email methods
   async sendConfirmationEmail(
-    user: UserEntity,
+    user: ProfileEntity,
     rawToken: string,
     expiresAt: Date,
   ) {
