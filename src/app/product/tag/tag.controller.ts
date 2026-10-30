@@ -22,18 +22,18 @@ import {
 } from '@nestjs/swagger';
 import { Roles } from 'src/app/common/decorators/roles.decorator';
 import { ErrorResponseDto } from 'src/app/common/dto/error-response.dto';
-import { apiRoutes } from 'src/app/common/path-builder/api.routes';
-import { TagsService } from './tags.service';
+import { apiRoutes } from 'src/app/common/api/api.routes';
+import { TagService } from './tag.service';
 import { TagUiResponseDto } from './dto/tag-ui-response.dto';
 import { TagResponseDto } from './dto/tag-response.dto';
 import { UpdateTagDto } from './dto/update-tag.dto';
 import { CreateTagDto } from './dto/create-tag.dto';
-import { UserRole } from '../profiles/user.types';
+import { UserRole } from '../profile/profile.types';
 
 @ApiTags('tags')
 @Controller()
-export class TagsController {
-  constructor(private readonly tagsService: TagsService) {}
+export class TagController {
+  constructor(private readonly tagService: TagService) {}
 
   // --------------------------------------------------
   // Public UI-friendly endpoints
@@ -44,7 +44,7 @@ export class TagsController {
   @ApiOkResponse({ type: TagUiResponseDto, isArray: true })
   async findAllTagsUi(): Promise<TagUiResponseDto[]> {
     try {
-      const result = await this.tagsService.findAll();
+      const result = await this.tagService.findAll();
       return result.map((tag) => tag.toUi());
     } catch (error) {
       console.error('Error fetching tags:', error);
@@ -58,7 +58,7 @@ export class TagsController {
   @ApiOkResponse({ type: TagUiResponseDto })
   @ApiNotFoundResponse({ type: ErrorResponseDto })
   async findTagByName(@Param('name') name: string): Promise<TagUiResponseDto> {
-    const tag = await this.tagsService.findByName(name);
+    const tag = await this.tagService.findByName(name);
 
     if (!tag) {
       throw new NotFoundException(`Tag with name ${name} not found`);
@@ -76,7 +76,7 @@ export class TagsController {
   async findTagById(
     @Param('id', ParseIntPipe) id: number,
   ): Promise<TagUiResponseDto> {
-    const tag = await this.tagsService.findById(id);
+    const tag = await this.tagService.findById(id);
 
     if (!tag) {
       throw new NotFoundException(`Tag with id ${id} not found`);
@@ -98,7 +98,7 @@ export class TagsController {
   async createTags(@Body() newTags: CreateTagDto[]): Promise<TagResponseDto[]> {
     const names = newTags.map((dto) => dto.name);
 
-    const tags = await this.tagsService.createMany(names);
+    const tags = await this.tagService.createMany(names);
 
     return tags.map((tag) => tag.toJSON());
   }
@@ -108,7 +108,7 @@ export class TagsController {
   @ApiOperation({ summary: 'Get all tags (admin format)' })
   @ApiOkResponse({ type: TagResponseDto, isArray: true })
   async findAllTags(): Promise<TagResponseDto[]> {
-    const result = await this.tagsService.findAll();
+    const result = await this.tagService.findAll();
 
     return result.map((tag) => tag.toJSON());
   }
@@ -123,7 +123,7 @@ export class TagsController {
     @Param('name') name: string,
     @Body() dto: UpdateTagDto,
   ): Promise<TagResponseDto> {
-    const updatedTag = await this.tagsService.updateByName(name, dto.name);
+    const updatedTag = await this.tagService.updateByName(name, dto.name);
 
     if (!updatedTag) {
       throw new NotFoundException(`Tag with name ${name} not found`);
@@ -142,7 +142,7 @@ export class TagsController {
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateTagDto,
   ): Promise<TagResponseDto> {
-    const updatedTag = await this.tagsService.updateById(id, dto.name);
+    const updatedTag = await this.tagService.updateById(id, dto.name);
 
     if (!updatedTag) {
       throw new NotFoundException(`Tag with id ${id} not found`);
@@ -158,7 +158,7 @@ export class TagsController {
   @ApiOkResponse({ type: TagResponseDto })
   @ApiNotFoundResponse({ type: ErrorResponseDto })
   async removeTagByName(@Param('name') name: string): Promise<TagResponseDto> {
-    const deletedTag = await this.tagsService.removeByName(name);
+    const deletedTag = await this.tagService.removeByName(name);
 
     if (!deletedTag) {
       throw new NotFoundException(`Tag with name ${name} not found`);
@@ -176,7 +176,7 @@ export class TagsController {
   async removeTagById(
     @Param('id', ParseIntPipe) id: number,
   ): Promise<TagResponseDto> {
-    const deletedTag = await this.tagsService.removeById(id);
+    const deletedTag = await this.tagService.removeById(id);
 
     if (!deletedTag) {
       throw new NotFoundException(`Tag with id ${id} not found`);

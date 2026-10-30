@@ -3,7 +3,7 @@ import { Tag } from './entities/tag.entity';
 import { TagsRepository } from 'src/app/infrastructure/data/database/tags/tags.repository';
 
 @Injectable()
-export class TagsService {
+export class TagService {
   constructor(private readonly tagsRepository: TagsRepository) {}
 
   async findAll(): Promise<Tag[]> {
