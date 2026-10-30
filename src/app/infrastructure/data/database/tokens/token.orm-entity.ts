@@ -7,7 +7,8 @@ import {
 } from 'typeorm';
 
 import { TokenType } from 'src/app/system/tokens/tokens.types';
-import { UserTokenPayload } from 'src/app/system/tokens/tokens.payload';
+import type { PersistentTokenType } from 'src/app/system/tokens/tokens.types';
+import { TokenPayload } from 'src/app/system/tokens/tokens.payload';
 
 @Entity('tokens')
 @Index('user_tokens_user_id_idx', ['userId'])
@@ -38,7 +39,7 @@ export class TokenOrmEntity {
     type: 'enum',
     enum: TokenType,
   })
-  type!: TokenType;
+  type!: PersistentTokenType;
 
   @Column({
     name: 'token_hash',
@@ -71,7 +72,7 @@ export class TokenOrmEntity {
     type: 'jsonb',
     nullable: true,
   })
-  payload!: UserTokenPayload | null;
+  payload!: TokenPayload | null;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
